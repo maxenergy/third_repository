@@ -42,13 +42,21 @@ MediaSession::~MediaSession()
         if(mMulticastRtpInstances[i])
         {
             this->removeRtpInstance(mMulticastRtpInstances[i]);
-            //delete mMulticastRtpInstances[i];
+			
+			#ifndef CUSTOM_NEW
+            delete mMulticastRtpInstances[i];
+            #else
             Delete::release(mMulticastRtpInstances[i]);
+			#endif
         }
 
         if(mMulticastRtcpInstances[i])
+			
+#ifndef CUSTOM_NEW
+            delete mMulticastRtcpInstances[i];
+#else
             Delete::release(mMulticastRtcpInstances[i]);
-            //delete mMulticastRtcpInstances[i];
+#endif
     }
 }
 

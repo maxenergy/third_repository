@@ -86,8 +86,8 @@ bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) 
 			out.mOutList.push_back(o);
 			ret_code = A::freeFeature(feature_result);
 			
-            //std::cout << "face detect 1 "<< frame.mFrameData.cols << frame.mFrameData.rows << std::endl;
-            //std::cout << "rect.left" << rect.left << "rect.top" << rect.top << "rect.right" << rect.right << "rect.bottom" << rect.bottom << std::endl;
+           // std::cout << "face detect 1 "<< frame.mFrameData.cols << frame.mFrameData.rows << std::endl;
+          //  std::cout << "rect.left" << rect.left << "rect.top" << rect.top << "rect.right" << rect.right << "rect.bottom" << rect.bottom << std::endl;
 			
         }
 		ret_code = A::freeAllFace(rgb_obj, length);

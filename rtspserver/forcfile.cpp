@@ -63,7 +63,7 @@ int cpp_init(void)
 
 int cpp_push(unsigned char * h264_buf,int size)
 {
-	rtpSink->push264(h264_buf,size,NULL,0);
+	rtpSink->push264(h264_buf,size,NULL,0,0);
 	return 0;
 }
 

@@ -26,6 +26,7 @@ extern "C" {
 #include "sample_comm.h"
 
 #include "hi_math.h"
+
 static SAMPLE_VI_CONFIG_S    stViConfig;
 
 static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
@@ -52,6 +53,8 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
     COMPRESS_MODE_E       enCompressMode = COMPRESS_MODE_NONE;
     VI_VPSS_MODE_E        enMastPipeMode = VI_OFFLINE_VPSS_OFFLINE;
 	VI_CHN_ATTR_S        vi_pstChnAttr;
+    ISP_CTRL_PARAM_S    stIspCtrlParam;
+
 	int i = 0;
     /*config vi*/
     SAMPLE_COMM_VI_GetSensorInfo(&stViConfig);
@@ -73,6 +76,23 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 	    stViConfig.astViInfo[i].stChnInfo.enVideoFormat   = enVideoFormat;
 	    stViConfig.astViInfo[i].stChnInfo.enCompressMode  = enCompressMode;
     }
+
+    s32Ret = HI_MPI_ISP_GetCtrlParam(stViConfig.astViInfo[0].stPipeInfo.aPipe[0], &stIspCtrlParam);
+    if (HI_SUCCESS != s32Ret)
+    {
+        SAMPLE_PRT("HI_MPI_ISP_GetCtrlParam failed with %d!\n", s32Ret);
+        return s32Ret;
+    }
+    stIspCtrlParam.u32StatIntvl  = 30/30;
+
+    s32Ret = HI_MPI_ISP_SetCtrlParam(stViConfig.astViInfo[0].stPipeInfo.aPipe[0], &stIspCtrlParam);
+    if (HI_SUCCESS != s32Ret)
+    {
+        SAMPLE_PRT("HI_MPI_ISP_SetCtrlParam failed with %d!\n", s32Ret);
+        return s32Ret;
+    }
+
+	
     /*start vi*/
     s32Ret = SAMPLE_COMM_VI_StartVi(&stViConfig);
     if (HI_SUCCESS != s32Ret)
@@ -82,7 +102,7 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
     }
 
 	for(i=0;i<s32ViCnt;i++){
-	    s32Ret = HI_MPI_VI_SetChnRotation(ViPipe[i], ViChn, ROTATION_90);
+	   // s32Ret = HI_MPI_VI_SetChnRotation(ViPipe[i], ViChn, ROTATION_90);
 	    if (HI_SUCCESS != s32Ret)
 	    {
 	        SAMPLE_PRT("HI_MPI_VI_SetChnRotation failed with %d\n", s32Ret);
@@ -96,6 +116,47 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 	}
     return s32Ret;
 }
+
+static HI_S32 start_venc(HI_U32 chnid)
+{
+    HI_S32 s32Ret = HI_SUCCESS;
+
+    VI_ROTATION_EX_ATTR_S stViRotationExAttr;
+	VENC_GOP_ATTR_S stGopAttr;
+
+    /* config venc */
+	PIC_SIZE_E enSize;
+	PAYLOAD_TYPE_E enType = PT_H264;
+	SAMPLE_RC_E enRcMode = SAMPLE_RC_AVBR;
+	HI_U32  u32Profile = 0;
+	HI_BOOL bRcnRefShareBuf = HI_TRUE;
+	stGopAttr.enGopMode = VENC_GOPMODE_NORMALP;
+	stGopAttr.stNormalP.s32IPQpDelta = 2;
+    SAMPLE_PRT("stGopAttr.stNormalP.s32IPQpDelta[%d]\n", stGopAttr.stNormalP.s32IPQpDelta);
+
+	SAMPLE_COMM_VI_GetSizeBySensor(stViConfig.astViInfo[0].stSnsInfo.enSnsType, &enSize);
+
+    /*start venc*/
+    s32Ret = SAMPLE_COMM_VENC_Start(chnid, enType,  enSize, enRcMode, u32Profile, bRcnRefShareBuf, &stGopAttr);
+    if (HI_SUCCESS != s32Ret)
+    {
+        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid, s32Ret);
+        return s32Ret;
+    }
+	VENC_CHN VeChn[1] = { chnid };
+	HI_S32 s32Cnt = 1;
+	SAMPLE_VENC_PROCFRAME_MODE_E mode = VENC_PROCFRAME_TO_CALLBACK;
+
+	s32Ret = SAMPLE_COMM_VENC_StartGetStream(VeChn, s32Cnt, mode);
+    if (HI_SUCCESS != s32Ret)
+    {
+        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid, s32Ret);
+        return s32Ret;
+    }
+
+    return s32Ret;
+}
+
 
 int sys_init()
 {
@@ -137,6 +198,9 @@ int sysinit(int *fd_out)
 	HI_U32 devid[2] = {0,1};
     sys_init();
 	start_vi(busid,devid);
+    s32Ret = start_venc(SAMPLE_VENC_CHNID);
+	SAMPLE_COMM_VI_Bind_VENC(stViConfig.astViInfo[0].stPipeInfo.aPipe[0],
+		stViConfig.astViInfo[0].stChnInfo.ViChn, SAMPLE_VENC_CHNID);
     return (s32Ret);
 }
 
@@ -194,13 +258,18 @@ int SetIRLedLight(unsigned int light)
   return 0;
 }
 
-
-
 void sysexit(void)
 {
-  SAMPLE_COMM_VI_StopVi(&stViConfig);
-  SAMPLE_COMM_SYS_Exit();
+	SAMPLE_COMM_VI_UnBind_VENC(stViConfig.astViInfo[0].stPipeInfo.aPipe[0],
+		stViConfig.astViInfo[0].stChnInfo.ViChn, SAMPLE_VENC_CHNID);
+	
+	SAMPLE_COMM_VENC_StopGetStream();
+    SAMPLE_COMM_VENC_Stop(SAMPLE_VENC_CHNID);
+	SAMPLE_COMM_VENC_UnRegCallback(SAMPLE_VENC_CHNID);
+    SAMPLE_COMM_VI_StopVi(&stViConfig);
+    SAMPLE_COMM_SYS_Exit();
 }
+
 #ifdef __cplusplus
 #if __cplusplus
 }

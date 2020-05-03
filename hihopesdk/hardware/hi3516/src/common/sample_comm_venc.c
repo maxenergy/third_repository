@@ -43,6 +43,10 @@ static pthread_t gs_VencQpmapPid;
 static SAMPLE_VENC_GETSTREAM_PARA_S gs_stPara;
 static SAMPLE_VENC_QPMAP_SENDFRAME_PARA_S stQpMapSendFramePara;
 
+SAMPLE_VENC_CALLBACK_S g_vencCallback[VENC_MAX_CHN_NUM] = {
+		[0 ... (VENC_MAX_CHN_NUM - 1)] =  NULL
+};
+
 static HI_S32 gs_s32SnapCnt = 0;
 HI_CHAR* DstBuf = NULL;
 #define TEMP_BUF_LEN 8
@@ -590,7 +594,16 @@ HI_S32 SAMPLE_COMM_VENC_CloseReEncode(VENC_CHN VencChn)
     }
     return HI_SUCCESS;
 }
-
+/*
+typedef enum hiVENC_MODTYPE_E {    
+MODTYPE_VENC = 1,	   
+MODTYPE_H264E,		  
+MODTYPE_H265E,
+MODTYPE_JPEGE,
+MODTYPE_RC,  
+MODTYPE_BUTT 
+} VENC_MODTYPE_E; 
+*/
 HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE_E enSize, SAMPLE_RC_E enRcMode, HI_U32  u32Profile, HI_BOOL bRcnRefShareBuf,VENC_GOP_ATTR_S *pstGopAttr)
 {
     HI_S32 s32Ret;
@@ -601,6 +614,21 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
     HI_U32                 u32FrameRate;
     HI_U32                 u32StatTime;
     HI_U32                 u32Gop = 30;
+    VENC_PARAM_MOD_S stVencModPara;
+    s32Ret = memset_s(&stVencModPara, sizeof(VENC_PARAM_MOD_S), 0, sizeof(VENC_PARAM_MOD_S));
+
+#if 1
+		stVencModPara.enVencModType = MODTYPE_H264E;
+		s32Ret = HI_MPI_VENC_GetModParam(&stVencModPara);
+	
+		if (s32Ret != HI_SUCCESS) {
+			return HI_FAILURE;
+		}
+		stVencModPara.stH264eModParam.u32OneStreamBuffer = 0;
+		stVencModPara.stH264eModParam.u32H264eMiniBufMode = 1;
+		stVencModPara.stH264eModParam.u32H264ePowerSaveEn = 1;
+		s32Ret = HI_MPI_VENC_SetModParam(&stVencModPara);
+#endif
 
     s32Ret = SAMPLE_COMM_SYS_GetPicSize( enSize, &stPicSize);
     if (HI_SUCCESS != s32Ret)
@@ -632,8 +660,8 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
     stVencChnAttr.stVencAttr.u32PicHeight    = stPicSize.u32Height;/*the picture height*/
     stVencChnAttr.stVencAttr.u32BufSize      = stPicSize.u32Width * stPicSize.u32Height * 2;/*stream buffer size*/
     stVencChnAttr.stVencAttr.u32Profile      = u32Profile;
-    stVencChnAttr.stVencAttr.bByFrame        = HI_TRUE;/*get stream mode is slice mode or frame mode?*/
-
+    stVencChnAttr.stVencAttr.bByFrame        = HI_FALSE;/*get stream mode is slice mode or frame mode?*/
+	printf("tream mode is slice mode");
     if(VENC_GOPMODE_SMARTP == pstGopAttr->enGopMode)
     {
         u32StatTime = pstGopAttr->stSmartP.u32BgInterval/u32Gop;
@@ -1258,6 +1286,15 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
         return s32Ret;
     }
 
+
+#if 0
+		VENC_H264_SLICE_SPLIT_S h264_split;
+		h264_split.bSplitEnable = HI_TRUE;
+		h264_split.u32MbLineNum = 20;
+		HI_MPI_VENC_SetH264SliceSplit(VencChn,&h264_split);
+#endif
+
+
     s32Ret = SAMPLE_COMM_VENC_CloseReEncode(VencChn);
     if (HI_SUCCESS != s32Ret)
     {
@@ -1268,6 +1305,15 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
     return HI_SUCCESS;
 }
 
+HI_VOID SAMPLE_COMM_VENC_RegCallback(VENC_CHN vencChn, SAMPLE_VENC_CALLBACK_S *callBack)
+{
+	g_vencCallback[vencChn].pfnDataCB = callBack->pfnDataCB;
+}
+
+HI_VOID SAMPLE_COMM_VENC_UnRegCallback(VENC_CHN vencChn)
+{
+	g_vencCallback[vencChn].pfnDataCB = NULL;
+}
 
 /******************************************************************************
 * funciton : Start venc stream mode
@@ -1978,7 +2024,7 @@ HI_S32 SAMPLE_COMM_VENC_QpmapSendFrame(VPSS_GRP VpssGrp,VPSS_CHN VpssChn,VENC_CH
 ******************************************************************************/
 HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
 {
-    HI_S32 i;
+    HI_S32 i, j;
     HI_S32 s32ChnTotal;
     VENC_CHN_ATTR_S stVencChnAttr;
     SAMPLE_VENC_GETSTREAM_PARA_S* pstPara;
@@ -1997,8 +2043,6 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
     PAYLOAD_TYPE_E enPayLoadType[VENC_MAX_CHN_NUM];
     VENC_STREAM_BUF_INFO_S stStreamBufInfo[VENC_MAX_CHN_NUM];
 
-    prctl(PR_SET_NAME, "GetVencStream", 0,0,0);
-
     pstPara = (SAMPLE_VENC_GETSTREAM_PARA_S*)p;
     s32ChnTotal = pstPara->s32Cnt;
     /******************************************
@@ -2011,36 +2055,6 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
     }
     for (i = 0; i < s32ChnTotal; i++)
     {
-        /* decide the stream file name, and open file to save stream */
-        VencChn = pstPara->VeChn[i];
-        s32Ret = HI_MPI_VENC_GetChnAttr(VencChn, &stVencChnAttr);
-        if (s32Ret != HI_SUCCESS)
-        {
-            SAMPLE_PRT("HI_MPI_VENC_GetChnAttr chn[%d] failed with %#x!\n", \
-                       VencChn, s32Ret);
-            return NULL;
-        }
-        enPayLoadType[i] = stVencChnAttr.stVencAttr.enType;
-
-        s32Ret = SAMPLE_COMM_VENC_GetFilePostfix(enPayLoadType[i], szFilePostfix);
-        if (s32Ret != HI_SUCCESS)
-        {
-            SAMPLE_PRT("SAMPLE_COMM_VENC_GetFilePostfix [%d] failed with %#x!\n", \
-                       stVencChnAttr.stVencAttr.enType, s32Ret);
-            return NULL;
-        }
-        if(PT_JPEG != enPayLoadType[i])
-        {
-            snprintf(aszFileName[i],32, "stream_chn%d%s", i, szFilePostfix);
-
-            pFile[i] = fopen(aszFileName[i], "wb");
-            if (!pFile[i])
-            {
-                SAMPLE_PRT("open file[%s] failed!\n",
-                           aszFileName[i]);
-                return NULL;
-            }
-        }
         /* Set Venc Fd. */
         VencFd[i] = HI_MPI_VENC_GetFd(i);
         if (VencFd[i] < 0)
@@ -2126,6 +2140,7 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                         SAMPLE_PRT("malloc stream pack failed!\n");
                         break;
                     }
+                    memset(stStream.pstPack, 0, sizeof(VENC_PACK_S) * stStat.u32CurPacks);
 
                     /*******************************************************
                      step 2.4 : call mpi to get one-frame stream
@@ -2141,39 +2156,21 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                         break;
                     }
 
-                    /*******************************************************
-                     step 2.5 : save frame to file
-                    *******************************************************/
-                    if(PT_JPEG == enPayLoadType[i])
-                    {
-                        snprintf(aszFileName[i],32, "stream_chn%d_%d%s", i, u32PictureCnt[i],szFilePostfix);
-                        pFile[i] = fopen(aszFileName[i], "wb");
-                        if (!pFile[i])
-                        {
-                            SAMPLE_PRT("open file err!\n");
-                            return NULL;
-                        }
-                    }
-
-#ifndef __HuaweiLite__
-                    s32Ret = SAMPLE_COMM_VENC_SaveStream(pFile[i], &stStream);
-#else
-                    s32Ret = SAMPLE_COMM_VENC_SaveStream_PhyAddr(pFile[i], &stStreamBufInfo[i], &stStream);
-#endif
-                    if (HI_SUCCESS != s32Ret)
-                    {
-                        free(stStream.pstPack);
-                        stStream.pstPack = NULL;
-                        SAMPLE_PRT("save stream failed!\n");
-                        break;
-                    }
+					if (g_vencCallback[i].pfnDataCB != NULL) 
+					{
+						for (j = 0; j < stStream.u32PackCount; j++)
+						{
+							g_vencCallback[i].pfnDataCB(stStream.pstPack[j].pu8Addr + stStream.pstPack[j].u32Offset,
+           						stStream.pstPack[j].u32Len - stStream.pstPack[j].u32Offset);
+						}
+					}
                     /*******************************************************
                      step 2.6 : release stream
                      *******************************************************/
-                    s32Ret = HI_MPI_VENC_ReleaseStream(i, &stStream);
+					s32Ret = HI_MPI_VENC_ReleaseStream(i, &stStream);
                     if (HI_SUCCESS != s32Ret)
                     {
-                        SAMPLE_PRT("HI_MPI_VENC_ReleaseStream failed!\n");
+                        SAMPLE_PRT("HI_MPI_VENC_ReleaseStream failed:%#x!\n", s32Ret);
                         free(stStream.pstPack);
                         stStream.pstPack = NULL;
                         break;
@@ -2184,25 +2181,11 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                     *******************************************************/
                     free(stStream.pstPack);
                     stStream.pstPack = NULL;
-                    u32PictureCnt[i]++;
-                    if(PT_JPEG == enPayLoadType[i])
-                    {
-                        fclose(pFile[i]);
-                    }
                 }
             }
         }
     }
-    /*******************************************************
-    * step 3 : close save-file
-    *******************************************************/
-    for (i = 0; i < s32ChnTotal; i++)
-    {
-        if(PT_JPEG != enPayLoadType[i])
-        {
-            fclose(pFile[i]);
-        }
-    }
+
     return NULL;
 }
 
@@ -2454,11 +2437,12 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc_Svc_t(void* p)
 /******************************************************************************
 * funciton : start get venc stream process thread
 ******************************************************************************/
-HI_S32 SAMPLE_COMM_VENC_StartGetStream(VENC_CHN VeChn[],HI_S32 s32Cnt)
+HI_S32 SAMPLE_COMM_VENC_StartGetStream(VENC_CHN VeChn[],HI_S32 s32Cnt, SAMPLE_VENC_PROCFRAME_MODE_E mode)
 {
     HI_U32 i;
 
     gs_stPara.bThreadStart = HI_TRUE;
+	gs_stPara.mode = mode;
     gs_stPara.s32Cnt = s32Cnt;
     for(i=0; i<s32Cnt; i++)
     {

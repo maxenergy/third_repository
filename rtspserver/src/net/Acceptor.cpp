@@ -29,9 +29,11 @@ Acceptor::~Acceptor()
 {
     if(mListenning)
         mEnv->scheduler()->removeIOEvent(mAcceptIOEvent);
-
-    //delete mAcceptIOEvent;
+#ifndef CUSTOM_NEW
+    delete mAcceptIOEvent;
+#else
     Delete::release(mAcceptIOEvent);
+#endif
 }
 
 void Acceptor::listen()

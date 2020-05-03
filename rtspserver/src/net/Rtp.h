@@ -19,7 +19,7 @@ typedef struct Extern_Data{
 		char xbuf[200];
 }extern_data;
 
-struct RtpHeader
+struct Ext_RtpHeader
 {
     /* byte 0 */
     uint8_t csrcLen:4;
@@ -46,6 +46,31 @@ struct RtpHeader
     uint8_t payload[0];
 };
 
+
+struct RtpHeader
+{
+    /* byte 0 */
+    uint8_t csrcLen:4;
+    uint8_t extension:1;
+    uint8_t padding:1;
+    uint8_t version:2;
+
+    /* byte 1 */
+    uint8_t payloadType:7;
+    uint8_t marker:1;
+    
+    /* bytes 2,3 */
+    uint16_t seq;
+    
+    /* bytes 4-7 */
+    uint32_t timestamp;
+    
+    /* bytes 8-11 */
+    uint32_t ssrc;
+	/* data */
+    uint8_t payload[0];
+};
+
 class RtpPacket
 {
 public:
@@ -53,6 +78,7 @@ public:
         _mBuffer(new uint8_t[RTP_MAX_PKT_SIZE+RTP_HEADER_SIZE+RTP_EXT_SIZE+100]),
         mBuffer(_mBuffer+4),
         mRtpHeadr((RtpHeader*)mBuffer),
+        mExtRtpHeadr((Ext_RtpHeader*)mBuffer),
         mSize(0)
     {
         
@@ -66,6 +92,7 @@ public:
     uint8_t* _mBuffer;
     uint8_t* mBuffer;
     RtpHeader* const mRtpHeadr;
+	Ext_RtpHeader* const mExtRtpHeadr;
     int mSize;
 };
 

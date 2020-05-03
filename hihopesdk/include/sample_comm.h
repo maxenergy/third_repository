@@ -106,6 +106,7 @@ extern "C" {
 
 #define WDR_MAX_PIPE_NUM        4
 
+#define SAMPLE_VENC_CHNID           0
 
 #define PAUSE()  do {\
         printf("---------------press Enter key to exit!---------------\n");\
@@ -211,11 +212,18 @@ typedef enum hiSAMPLE_RC_E
 /*******************************************************
     structure define
 *******************************************************/
+typedef enum hiSAMPLE_VENC_PROCFRAME_MODE_E
+{
+	VENC_PROCFRAME_TO_SAVE = 0,
+	VENC_PROCFRAME_TO_CALLBACK
+}SAMPLE_VENC_PROCFRAME_MODE_E;
+
 typedef struct hiSAMPLE_VENC_GETSTREAM_PARA_S
 {
     HI_BOOL bThreadStart;
     VENC_CHN VeChn[VENC_MAX_CHN_NUM];
     HI_S32  s32Cnt;
+	SAMPLE_VENC_PROCFRAME_MODE_E mode;
 } SAMPLE_VENC_GETSTREAM_PARA_S;
 
 typedef struct hiSAMPLE_VENC_QPMAP_SENDFRAME_PARA_S
@@ -475,6 +483,26 @@ typedef struct hiSAMPLE_VB_CAL_CONFIG_S
 }SAMPLE_VB_CAL_CONFIG_S;
 
 /*******************************************************
+    venc config
+*******************************************************/
+#if 0
+typedef HI_S32 (*PFN_VENC_DataProc)(VENC_CHN vencChn, VENC_STREAM_S *pstStream,
+                                    HI_VOID *pPrivateData);
+
+typedef struct hiSAMPLE_VENC_CALLBACK_S {
+    PFN_VENC_DataProc pfnDataCB;
+    HI_VOID *pPrivateData;
+} SAMPLE_VENC_CALLBACK_S;
+#endif
+
+typedef HI_VOID (*PFN_VENC_DataProc)(unsigned char *ph264,int size);
+
+typedef struct hiSAMPLE_VENC_CALLBACK_S {
+    PFN_VENC_DataProc pfnDataCB;
+} SAMPLE_VENC_CALLBACK_S;
+
+
+/*******************************************************
     function announce
 *******************************************************/
 
@@ -591,7 +619,7 @@ HI_S32 SAMPLE_COMM_VENC_SnapStart(VENC_CHN VencChn, SIZE_S* pstSize, HI_BOOL bSu
 HI_S32 SAMPLE_COMM_VENC_SnapProcess(VENC_CHN VencChn, HI_U32 SnapCnt, HI_BOOL bSaveJpg, HI_BOOL bSaveThm);
 HI_S32 SAMPLE_COMM_VENC_SaveJpeg(VENC_CHN VencChn, HI_U32 SnapCnt);
 HI_S32 SAMPLE_COMM_VENC_SnapStop(VENC_CHN VencChn);
-HI_S32 SAMPLE_COMM_VENC_StartGetStream(VENC_CHN VeChn[],HI_S32 s32Cnt);
+HI_S32 SAMPLE_COMM_VENC_StartGetStream(VENC_CHN VeChn[],HI_S32 s32Cnt, SAMPLE_VENC_PROCFRAME_MODE_E mode);
 HI_S32 SAMPLE_COMM_VENC_StopGetStream(void);
 HI_S32 SAMPLE_COMM_VENC_StartGetStream_Svc_t(HI_S32 s32Cnt);
 HI_S32 SAMPLE_COMM_VENC_GetGopAttr(VENC_GOP_MODE_E enGopMode,VENC_GOP_ATTR_S *pstGopAttr);
@@ -644,6 +672,9 @@ HI_VOID SAMPLE_COMM_VDEC_StartGetPic(HI_S32 s32ChnNum, VDEC_THREAD_PARAM_S *pstV
 HI_VOID SAMPLE_COMM_VDEC_StopGetPic(HI_S32 s32ChnNum, VDEC_THREAD_PARAM_S *pstVdecGet, pthread_t *pVdecThread);
 HI_S32 SAMPLE_COMM_VDEC_Start(HI_S32 s32ChnNum, SAMPLE_VDEC_ATTR *pastSampleVdec);
 HI_S32 SAMPLE_COMM_VDEC_Stop(HI_S32 s32ChnNum);
+HI_VOID SAMPLE_COMM_VENC_RegCallback(VENC_CHN vencChn, SAMPLE_VENC_CALLBACK_S *callBack);
+HI_VOID SAMPLE_COMM_VENC_UnRegCallback(VENC_CHN vencChn);
+
 #ifdef __cplusplus
 #if __cplusplus
 }

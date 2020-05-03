@@ -45,10 +45,13 @@ AsyncLogging::~AsyncLogging()
     mRun = false;
     mCond->broadcast();
 
-    //delete mMutex;
-    //delete mCond;
+#ifndef CUSTOM_NEW
+    delete mMutex;
+    delete mCond;
+#else
     Delete::release(mMutex);
     Delete::release(mCond);
+#endif
 }
 
 AsyncLogging* AsyncLogging::instance()

@@ -14,7 +14,6 @@
 int sockets::createTcpSock()
 {
   int sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
-
   return sockfd;
 }
 

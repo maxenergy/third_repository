@@ -22,7 +22,7 @@ public:
     virtual std::string getMediaDescription(uint16_t port) = 0;
     virtual std::string getAttribute() = 0;
 
-	virtual void push264(uint8_t* frame_h264,int size,char* ext_data,int exlen) = 0;
+	virtual void push264(uint8_t* frame_h264,int size,char* ext_data,int exlen,unsigned int timestamp) = 0;
     void setSendFrameCallback(SendPacketCallback cb, void* arg1, void* arg2);
 
 protected:
@@ -50,6 +50,7 @@ protected:
     uint16_t mSeq;
     uint32_t mTimestamp;
     uint32_t mSSRC;
+	uint32_t mXdata_size;
 
 private:
     TimerEvent* mTimerEvent;

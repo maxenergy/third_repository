@@ -251,12 +251,15 @@ bool V4l2MediaSource::x264Exit()
     x264_picture_clean(mPicIn);
     x264_encoder_close(mX264Handle);
 
-    //delete mPicIn;
-    //delete mPicOut;
-    //delete mParam;
+#ifndef CUSTOM_NEW
+    delete mPicIn;
+    delete mPicOut;
+    delete mParam;
+#else
     Delete::release(mPicIn);
     Delete::release(mPicOut);
     Delete::release(mParam);
+#endif
 
     return true;
 }

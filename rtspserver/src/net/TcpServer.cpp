@@ -15,8 +15,12 @@ TcpServer::TcpServer(UsageEnvironment* env, const Ipv4Address& addr) :
 
 TcpServer::~TcpServer()
 {
-    //delete mAcceptor;
+
+#ifndef CUSTOM_NEW
+    delete mAcceptor;
+#else
     Delete::release(mAcceptor);
+#endif
 }
 
 void TcpServer::start()

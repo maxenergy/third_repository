@@ -26,11 +26,13 @@ RtspServer::RtspServer(UsageEnvironment* env, const Ipv4Address& addr) :
 
 RtspServer::~RtspServer()
 {
-    //delete mTriggerEvent;
-    //delete mMutex;
-
+#ifndef CUSTOM_NEW
+    delete mTriggerEvent;
+    delete mMutex;
+#else
     Delete::release(mTriggerEvent);
     Delete::release(mMutex);
+#endif
 }
 
 void RtspServer::handleNewConnection(int connfd)
@@ -97,8 +99,12 @@ void RtspServer::handleDisconnectionList()
         int sockfd = *it;
         std::map<int, RtspConnection*>::iterator _it = mConnections.find(sockfd);
         assert(_it != mConnections.end());
-        //delete _it->second;
+		
+#ifndef CUSTOM_NEW
+        delete _it->second;
+#else
         Delete::release(_it->second);
+#endif
         mConnections.erase(sockfd);
     }
 

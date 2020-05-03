@@ -10,13 +10,14 @@ public:
     static H264RtpSink* createNew(UsageEnvironment* env, MediaSource* mediaSource);
     
     H264RtpSink(UsageEnvironment* env, MediaSource* mediaSource);
-	virtual void push264(uint8_t* frame_h264,int size,char* ext_data,int exlen);
+	virtual void push264(uint8_t* frame_h264,int size,char* ext_data,int exlen,unsigned int timestamp);
 	
     virtual ~H264RtpSink();
 
     virtual std::string getMediaDescription(uint16_t port);
     virtual std::string getAttribute();
     virtual void handleFrame(AVFrame* frame);
+	void handleFrame(AVFrame* frame,uint8_t flag_ex);
 
 private:
     RtpPacket mRtpPacket;

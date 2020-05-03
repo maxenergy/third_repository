@@ -23,8 +23,12 @@ TcpConnection::TcpConnection(UsageEnvironment* env, int sockfd) :
 TcpConnection::~TcpConnection()
 {
     mEnv->scheduler()->removeIOEvent(mTcpConnIOEvent);
-    //delete mTcpConnIOEvent;
+
+#ifndef CUSTOM_NEW
+    delete mTcpConnIOEvent;
+#else
     Delete::release(mTcpConnIOEvent);
+#endif
 }
 
 void TcpConnection::setDisconnectionCallback(DisconnectionCallback cb, void* arg)
@@ -90,7 +94,13 @@ void TcpConnection::disableErrorHandling()
 void TcpConnection::handleRead()
 {
     int ret = mInputBuffer.read(mSocket.fd());
-
+#if 0
+    printf("read count %d \n",ret);
+	for(int i =0;i<ret;i++)
+	{
+		printf("%c",mInputBuffer.peek()[i]);
+	}
+#endif
     if(ret == 0)
     {
         LOG_DEBUG("client disconnect\n");

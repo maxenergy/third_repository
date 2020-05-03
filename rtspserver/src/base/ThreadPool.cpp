@@ -25,10 +25,13 @@ ThreadPool::ThreadPool(int num) :
 ThreadPool::~ThreadPool()
 {
     cancelThreads();
-    //delete mMutex;
-    //delete mCondition;
+#ifndef CUSTOM_NEW
+    delete mMutex;
+    delete mCondition;
+#else
     Delete::release(mMutex);
     Delete::release(mCondition);
+#endif
 }
 
 void ThreadPool::addTask(ThreadPool::Task& task)

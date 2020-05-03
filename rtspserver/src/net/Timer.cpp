@@ -89,8 +89,11 @@ TimerManager::TimerManager(int timerFd, Poller* poller) :
 TimerManager::~TimerManager()
 {
     mPoller->removeIOEvent(mTimerIOEvent);
-    //delete mTimerIOEvent;
+#ifndef CUSTOM_NEW
+    delete mTimerIOEvent;
+#else
     Delete::release(mTimerIOEvent);
+#endif
 }
 
 Timer::TimerId TimerManager::addTimer(TimerEvent* event, Timer::Timestamp timestamp,

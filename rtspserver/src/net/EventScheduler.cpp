@@ -75,13 +75,16 @@ EventScheduler::~EventScheduler()
     mPoller->removeIOEvent(mWakeIOEvent);
     ::close(mWakeupFd);
 
-    //delete mWakeIOEvent;
-    //delete mTimerManager;
-    //delete mPoller;
+#ifndef CUSTOM_NEW
+    delete mWakeIOEvent;
+    delete mTimerManager;
+    delete mPoller;
+#else
     Delete::release(mWakeIOEvent);
     Delete::release(mTimerManager);
     Delete::release(mPoller);
     Delete::release(mMutex);
+#endif
 }
 
 bool EventScheduler::addTriggerEvent(TriggerEvent* event)

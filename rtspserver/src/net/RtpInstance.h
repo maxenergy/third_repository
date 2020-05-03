@@ -50,6 +50,10 @@ public:
     {
         if(mRtpType == RTP_OVER_UDP)
         {
+        //	if(rtpPacket->mSize < 250)
+        //	{
+		//		printf("get a small packet!\n");
+		//	}
             return sendOverUdp(rtpPacket->mBuffer, rtpPacket->mSize);
         }
         else

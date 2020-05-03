@@ -52,14 +52,22 @@ RtspConnection::~RtspConnection()
         {
             if(mSession)
                 mSession->removeRtpInstance(mRtpInstances[i]);
-            //delete mRtpInstances[i];
-            Delete::release(mRtpInstances[i]);
+			
+			#ifndef CUSTOM_NEW
+            	delete mRtpInstances[i];
+			#else
+				Delete::release(mRtpInstances[i]);
+			#endif
         }
 
         if(mRtcpInstances[i])
         {
-            //delete mRtcpInstances[i];
-            Delete::release(mRtcpInstances[i]);
+        	
+			#ifndef CUSTOM_NEW
+            	delete mRtcpInstances[i];
+			#else
+            	Delete::release(mRtcpInstances[i]);
+			#endif
         }
     }
 }

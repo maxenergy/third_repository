@@ -10,11 +10,13 @@ cmake_minimum_required(VERSION 2.8)
 
 SET(BOARD_TYPE "IPC")
 
-SET(CMAKE_CXX_FLAGS  "-mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")
+SET(CMAKE_CXX_FLAGS  "-g -mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")
 
 #include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/business/facerecognition)
 include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/include)
-include_directories(rtspserver/src/)
+include_directories(${CMAKE_SOURCE_DIR}/rtspserver/src/)
+include_directories(${CMAKE_SOURCE_DIR}/http_cmd/inc)
+
 add_definitions(-Darm)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/out)
@@ -26,7 +28,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/out)
 
 ADD_SUBDIRECTORY(hihopesdk)
 ADD_SUBDIRECTORY(rtspserver)
-
+ADD_SUBDIRECTORY(http_cmd)
 
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib)
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib3516/lib)
@@ -34,7 +36,7 @@ link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/opencv/lib_arm)
 
 add_executable(aipc src/main.cpp)
 
-target_link_libraries( aipc hihopesdk rtspserver -ldl -lpthread pola gomp)
+target_link_libraries( aipc hihopesdk rtspserver http_cmd -ldl -lpthread pola gomp)
 
 
 target_link_libraries(aipc 

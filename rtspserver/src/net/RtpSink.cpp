@@ -17,6 +17,7 @@ RtpSink::RtpSink(UsageEnvironment* env, MediaSource* mediaSource, int payloadTyp
     mMarker(0),
     mSeq(0),
     mTimestamp(0),
+    mXdata_size(0),
     mTimerId(0)
     
 {
@@ -37,6 +38,7 @@ RtpSink::RtpSink(UsageEnvironment* env, MediaSource* mediaSource, int payloadTyp
     mMarker(0),
     mSeq(0),
     mTimestamp(0),
+    mXdata_size(0),
     mTimerId(0)
     
 {
@@ -49,7 +51,11 @@ RtpSink::RtpSink(UsageEnvironment* env, MediaSource* mediaSource, int payloadTyp
 RtpSink::~RtpSink()
 {
     mEnv->scheduler()->removeTimedEvent(mTimerId);
+#ifndef CUSTOM_NEW
+	delete mTimerEvent;
+#else
     Delete::release(mTimerEvent);
+#endif
 }
 
 void RtpSink::setSendFrameCallback(SendPacketCallback cb, void* arg1, void* arg2)
@@ -72,7 +78,7 @@ void RtpSink::sendRtpPacket(RtpPacket* packet)
     rtpHead->timestamp = htonl(mTimestamp);
     rtpHead->ssrc = htonl(mSSRC);
     packet->mSize += RTP_HEADER_SIZE;
-	packet->mSize += RTP_EXT_SIZE;
+	packet->mSize += mXdata_size;
 	
     if(mSendPacketCallback)
         mSendPacketCallback(mArg1, mArg2, packet);

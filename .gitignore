@@ -1,0 +1,7 @@
+libs
+*.o
+*.pro
+*.pri
+*.so
+*.bin
+*.a

@@ -27,7 +27,8 @@ public:
 		memcpy((void*)mBuffer, in_buf, size);
 	}
     ~AVFrame()
-    { delete mBuffer; }
+    { 
+	delete mBuffer; }
 
     uint8_t* mBuffer;
     uint8_t* mFrame;

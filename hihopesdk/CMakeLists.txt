@@ -147,6 +147,10 @@ add_definitions(-Darm)
 add_definitions(-DSENSOR0_TYPE=SONY_IMX327_MIPI_2M_30FPS_12BIT)
 add_definitions(-DSENSOR1_TYPE=SONY_IMX327_MIPI_2M_30FPS_12BIT)
 
+#add_definitions(-DSENSOR0_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT)
+#add_definitions(-DSENSOR1_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT)
+
+
 
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib3516/lib)
 
