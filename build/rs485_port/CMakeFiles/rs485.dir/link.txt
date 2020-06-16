@@ -1,0 +1,2 @@
+/usr/bin/ar qc librs485.a  CMakeFiles/rs485.dir/rs485.cpp.o
+/usr/bin/ranlib librs485.a

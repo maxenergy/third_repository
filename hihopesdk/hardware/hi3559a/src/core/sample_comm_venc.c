@@ -1999,12 +1999,11 @@ HI_VOID* SAMPLE_COMM_VENC_GetVencStreamProc(HI_VOID* p)
                             return NULL;
                         }
                     }
-
-#ifndef __HuaweiLite__
+					
+					if(i == 0)
                     s32Ret = SAMPLE_COMM_VENC_SaveStream(pFile[i], &stStream);
-#else
-                    s32Ret = SAMPLE_COMM_VENC_SaveStream_PhyAddr(pFile[i], &stStreamBufInfo[i], &stStream);
-#endif
+					
+
                     if (HI_SUCCESS != s32Ret)
                     {
                         free(stStream.pstPack);

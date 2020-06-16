@@ -39,6 +39,7 @@ public:
     UserInfo getUserInfoByFeatureMapsIdx(size_t idx);
 
 	int filter(float *featureMap);
+	bool delface(int userid);
 
 private:
     bool creatTable();

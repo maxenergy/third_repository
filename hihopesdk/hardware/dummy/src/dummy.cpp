@@ -1,12 +1,17 @@
 #include "dummy.h"
+#ifndef BUILD_FACTORY_TEST_APP
 namespace A {
 #include "pola_sdk_export.h"
 };
+#endif
 #include <random>
 #include <iostream>
 #include <unistd.h>
 #include <stdio.h>
 #include <vector>
+#include <math.h>
+
+#define ADD_FACE_NO_LIVENESSCHECK
 
 #define DummyNetImpl_IMPLEMENT(T1, T2, NAME) \
     ReflectObject_SpecRegister_IMPLEMENT(T1, AIInterface::getName("dummy" , NAME)); \
@@ -35,19 +40,170 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+/*?¨¬2a1y3¨¬*/
+/*¨ª???detect,track,¨¨?o¨®3?box*/
+/*handle ?¨ª¨º?¡Àe*/
+/*¨º?¡Àe?¨¬2a?Ppose,pose ¡¤?o?¨¬??t?¨°3??¨¢1?*/
+/*?¨¢1?o¨ªID??¨®|¡ê?¡¤?¨¨??¨®¨¢D*/
+/*track ¦Ì?¦Ì?id ¨¨£¤?¨°¨°?¨®D¨º?¡Àe?¨¢1?,id ?a¨º¡ì¡ä¨®?¨®¨¢D¨¤???¨¦?3y??¨º?¡Àe?¨¢1?*/
+#ifdef BUILD_FACTORY_TEST_APP
+bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) {
+    usleep(30*1000);
+	return true;
+}
 
+bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out) {	
+    usleep(30*1000);
+	return true;
+}
+
+#else
 bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) {
     A::Pola_Object *rgb_obj ,*ir_obj;
     int length,irLength;
 	A::ERROR_CODE ret_code;
 
-	//printf("mRawdata Mtcnn detect %d %d \n ", frame.mRawdata.mWidth,frame.mRawdata.mHeiht);
 	if(!frame.mFrameData.empty()){
-		//ret_code = A::face_detect((const char *)frame.mFrameData.data, frame.mFrameData.cols, frame.mFrameData.rows, &rgb_obj, &length);
-		printf("mFrameData not support rgb data!\n ");
+		ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mFrameData.data, frame.mFrameData.cols, frame.mFrameData.rows, &rgb_obj, &length);
 	}
 	else if(!frame.mRawdata.empty()){
-    	ret_code = A::face_detect((const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
+		if(frame.mRawdata.mFormat == VIFrame::PixelFormat::BGR)
+			ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
+		else
+			ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
+        //ret_code = A::detect((const char *)frame.IR_mRawdata.mData, frame.IR_mRawdata.mWidth, frame.IR_mRawdata.mHeiht, A::YUV, &ir_obj, &irLength);
+	}
+
+	int t_id[length];
+    ret_code = A::face_track(rgb_obj,length,t_id);
+	
+	if (ret_code == A::RET_OK){
+		for (int i = 0; i < length; i++) {
+			A::Facebox rect;
+			ret_code = A::getFacebox(rgb_obj[i], &rect);
+			MtcnnOut o;
+			o.mRect = cv::Rect2f(cv::Point2f(rect.left, rect.top), cv::Point2f(rect.right, rect.bottom));
+			o.mTrackID = t_id[i];
+			o.object = rgb_obj;
+			o.mUserID = -1;
+			out.mOutList.push_back(o);
+		}
+	}else{
+		printf("track error! \n");
+	}
+	return true;
+}
+
+#define GOOD_FACE_SCORE 0.5
+
+bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out) {	
+	A::ERROR_CODE ret_code;
+	int face_lenth = 0;
+	int i = 0;
+#ifdef ADD_FACE_NO_LIVENESSCHECK
+	int igrore =0;
+#endif
+	for (FaceNetOut face : out.mOutList) {
+			face_lenth++;
+        }
+	
+    A::Pola_Object *rgb_obj;
+	
+	for (i=0; i< out.mOutList.size(); i++) {
+			float *feature_result = 0;
+			int size;
+			rgb_obj = (A::Pola_Object *)out.mOutList[i].object;
+#ifdef ADD_FACE_NO_LIVENESSCHECK
+			if(out.mOutList[i].tracking_flag == 0x33)
+		 	{
+				igrore = 1;
+			}
+#endif
+			if(out.mOutList[i].tracking_flag != 1){
+				A::Pola_Pose pose;
+				ret_code = getPose(rgb_obj[i], &pose);
+				if(pose.yaw<0)
+					pose.yaw = 0-pose.yaw;
+				
+				if(pose.pitch<0)
+					pose.pitch = 0-pose.pitch;
+				
+				if((pose.yaw < 30)||(pose.pitch < 30)){
+					out.mOutList[i].mScore = 1 - pose.blur;
+				}else{
+					out.mOutList[i].mScore = 0.011;
+				}
+		    }else{
+				out.mOutList[i].mScore = 0.022;
+			}
+			
+			float live_score;
+	
+	#ifdef ADD_FACE_NO_LIVENESSCHECK
+			if(!igrore){
+				A::Check_Liveness(rgb_obj[i], &live_score);
+			}
+			else{
+				printf("add face ,no need check livenees!\n");
+				live_score = 1.0;
+			}
+	#else
+				A::Check_Liveness(rgb_obj[i], &live_score);
+	#endif
+
+			if(live_score < 0.7)
+				out.mOutList[i].mScore = 0.077;
+
+			//printf("live_score is %f \n",live_score);
+			
+			if(out.mOutList[i].mScore >= GOOD_FACE_SCORE){
+                ret_code = A::getFeature(rgb_obj[i], &feature_result, &size);
+				if(ret_code == A::RET_OK){
+					memcpy(out.mOutList[i].mFeatureMap, feature_result, size * sizeof(float));
+					ret_code = A::freeFeature(feature_result);
+				}else if(feature_result != 0)
+				{
+					printf("feature_result is not null need free!\n");
+					ret_code = A::freeFeature(feature_result);
+				}
+			}
+        }
+		if(face_lenth){
+			ret_code = A::freeAllFace(rgb_obj, face_lenth);
+			if(ret_code != A::RET_OK)
+				printf("failed to freeAllFace face_lenth %d \n",face_lenth);
+		}
+		
+    return true;
+}
+#endif
+
+bool ObjectDetectDummyImpl::detect(int device, Frame &frame, ObjectDetectInterface::Out &out) {
+    int counts =  sRandom() % 20;
+	std::cout << "face detect 3 " << std::endl;
+    for(int i = 0; i< counts; i++) {
+        ObjectDetectOut item;
+        sprintf(item.mName, "person");
+        out.mOutList.push_back(item);
+    }
+    usleep(10*1000);
+    return true;
+}
+
+#if 0
+bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) {
+    A::Pola_Object *rgb_obj ,*ir_obj;
+    int length,irLength;
+	A::ERROR_CODE ret_code;
+
+	if(!frame.mFrameData.empty()){
+		ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mFrameData.data, frame.mFrameData.cols, frame.mFrameData.rows, &rgb_obj, &length);
+	}
+	else if(!frame.mRawdata.empty()){
+		if(frame.mRawdata.mFormat == VIFrame::PixelFormat::BGR)
+			ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
+		else
+			ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
         //ret_code = A::detect((const char *)frame.IR_mRawdata.mData, frame.IR_mRawdata.mWidth, frame.IR_mRawdata.mHeiht, A::YUV, &ir_obj, &irLength);
 	}
 #if 0
@@ -149,6 +305,6 @@ bool ObjectDetectDummyImpl::detect(int device, Frame &frame, ObjectDetectInterfa
     usleep(10*1000);
     return true;
 }
-
+#endif
 //#pragma GCC diagnostic pop
 

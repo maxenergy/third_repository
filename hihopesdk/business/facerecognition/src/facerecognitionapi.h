@@ -8,6 +8,7 @@
 #include "faceaccesscontrol.h"
 #include "faceattendance.h"
 
+
 class FaceRecognitionApi : public Singleton<FaceRecognitionApi>
 {
 public:
@@ -21,6 +22,8 @@ public:
 
     Camera *mCamera;
 	Camera *mCamera_IR;
+	std::mutex mMutex;
+	std::list<UserInfo> mTmp_FaceDB;
 	
     DBCache *mDBCache;
     FaceDetect *mFaceDetect;
@@ -38,6 +41,8 @@ public:
     bool getUserInfo(int userID, UserInfo &info);
     bool updateUserInfo(UserInfo &info);
 
+	bool delface(int userid);
+	
     bool updateFaceInfo(FaceInfo &info);
     bool updateFaceInfo(int userID, VIFrame &facePhoto);
 	bool updateFaceInfo(int userId, cv::Mat &facePhoto);
@@ -52,7 +57,11 @@ public:
 //	void setCameraPreviewCallBack1(PreviewCallback1 func);
 
 private:
-    void handleFaceDetectServiceResult(FaceDetect::Msg bob);
+    void handleFaceDetectServiceResult_detect(FaceDetect::Msg bob);
+	void handleFaceDetectServiceResult_Reconition(FaceDetect::Msg bob);
+
+//	std::mutex mMutex;
+//	std::list<UserInfo> mTmp_FaceDB;
 
     Singleton_Decalartion(FaceRecognitionApi);
 };

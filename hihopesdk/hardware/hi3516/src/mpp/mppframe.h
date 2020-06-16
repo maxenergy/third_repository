@@ -9,9 +9,11 @@ public:
         GRAY,
         I420,
         YU16,
+        BGR,
+        NV21,
     };
 
-    PixelFormat mFormat;
+    PixelFormat mFormat = NV21;
     unsigned int mSize;
     unsigned int mWidth;
     unsigned int mHeiht;

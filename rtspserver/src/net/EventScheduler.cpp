@@ -64,6 +64,7 @@ EventScheduler::EventScheduler(PollerType type, int fd) :
 
     mWakeIOEvent = IOEvent::createNew(mWakeupFd, this);
     mWakeIOEvent->setReadCallback(handleReadCallback);
+  
     mWakeIOEvent->enableReadHandling();
     mPoller->addIOEvent(mWakeIOEvent);
 
@@ -139,6 +140,7 @@ void EventScheduler::loop()
 {
     while(mQuit != true)
     {
+    	usleep(1000*5);
         this->handleTriggerEvents();
         mPoller->handleEvent();
         this->handleOtherEvent();

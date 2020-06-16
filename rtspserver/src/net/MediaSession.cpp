@@ -59,7 +59,9 @@ MediaSession::~MediaSession()
 #endif
     }
 }
+/*
 
+*/
 std::string MediaSession::generateSDPDescription()
 {
     if(!mSdp.empty())
@@ -70,11 +72,12 @@ std::string MediaSession::generateSDPDescription()
 
     snprintf(buf, sizeof(buf),
         "v=0\r\n"
-        "o=- 9%ld 1 IN IP4 %s\r\n"
+        "o=- 9%ld 9%ld IN IP4 %s\r\n"
         "t=0 0\r\n"
+        "s=live\r\n"
         "a=control:*\r\n"
         "a=type:broadcast\r\n",
-        (long)time(NULL), ip.c_str());
+        (long)time(NULL),(long)time(NULL), ip.c_str());
 
     if(isStartMulticast())
     {
@@ -101,7 +104,7 @@ std::string MediaSession::generateSDPDescription()
         else
             snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf),
                         "c=IN IP4 0.0.0.0\r\n");
-
+//Media Attribute (a): x-dimensions:1920,1080
         snprintf(buf+strlen(buf), sizeof(buf)-strlen(buf),
                     "%s\r\n", mTracks[i].mRtpSink->getAttribute().c_str());
 
@@ -123,7 +126,6 @@ MediaSession::Track* MediaSession::getTrack(MediaSession::TrackId trackId)
 
     return NULL;
 }
-
 bool MediaSession::addRtpSink(MediaSession::TrackId trackId, RtpSink* rtpSink)
 {
     Track* track;
@@ -136,7 +138,7 @@ bool MediaSession::addRtpSink(MediaSession::TrackId trackId, RtpSink* rtpSink)
     track->mIsAlive = true;
 
     rtpSink->setSendFrameCallback(sendPacketCallback, this, track);
-
+    rtpsinksscr = rtpSink->get_msscr();
     return true;
 }
 

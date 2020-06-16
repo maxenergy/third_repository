@@ -3,7 +3,9 @@
 #include "SQLiteCpp/Transaction.h"
 #include <iostream>
 #include <sstream>
-
+//sqlit:
+//id <-> featuremap
+//id <-> name , floor, permission, reserve0, reserve1
 static SQLite::Database db("facerecognition.db", SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE);
 
 DBCache::DBCache()
@@ -16,8 +18,7 @@ DBCache::DBCache()
 
 bool DBCache::creatTable() {
     try {
-		
-        db.exec("CREATE TABLE if not exists userinfo (id INTEGER PRIMARY KEY, name TEXT)");
+        db.exec("CREATE TABLE if not exists userinfo (id INTEGER PRIMARY KEY, name TEXT ,floor INTEGER,perm INTEGER)");
         db.exec("CREATE TABLE if not exists faceinfo (id INTEGER PRIMARY KEY, feature_map blob)");
         db.exec("CREATE TABLE if not exists permissioninfo (id INTEGER PRIMARY KEY, user_id INTEGER, device_id INTEGER, permission INTEGER)");
     } catch (std::exception&) {
@@ -34,6 +35,8 @@ bool DBCache::flushCache() {
             UserInfo item;
             item.mUserID = userQuery.getColumn(0).getInt();
             item.mUserName = userQuery.getColumn(1).getText();
+			item.floor = userQuery.getColumn(2).getInt();
+			item.perm = userQuery.getColumn(3).getInt();
             mUserInfoMaps[item.mUserID] = item;
         }
         userQuery.reset();
@@ -67,10 +70,12 @@ bool DBCache::flushCache() {
         }
         faceQuery.reset();
 
+
+		
+#ifndef BUILD_FACTORY_TEST_APP	
 		ERROR_CODE ret_code = makeFaceGp(&handle);
 		int feature_base_size = faceInfoList.size();
-		
-#if 1
+
         mNumber = faceInfoList.size();
         if (mNumber > 0) {
             mUserIDs = static_cast<int *>(malloc(mNumber * sizeof(int)));
@@ -100,7 +105,9 @@ bool DBCache::clear() {
     ret = db.exec("DROP TABLE IF EXISTS userinfo");
     ret = db.exec("DROP TABLE IF EXISTS faceinfo");
     ret = db.exec("DROP TABLE IF EXISTS permissioninfo");
+#ifndef BUILD_FACTORY_TEST_APP	
 	freeGp(handle);
+#endif
     return ret;
 }
 
@@ -124,6 +131,23 @@ bool DBCache::getUserInfo(int userID, UserInfo &info) {
     return true;
 }
 
+bool DBCache::delface(int userid)
+{
+	int ret=0;
+#ifndef BUILD_FACTORY_TEST_APP	
+	char sql_userinfo[100];
+	ERROR_CODE ret_code = GpdelItem(handle, userid);
+	if(ret_code == RET_OK){
+		sprintf(sql_userinfo,"DELETE FROM userinfo WHERE id=%d",userid);
+	    char sql_faceinfo[100];
+		sprintf(sql_faceinfo,"DELETE FROM faceinfo WHERE id=%d",userid);
+		ret = db.exec(sql_userinfo);
+		ret = db.exec(sql_faceinfo);
+	}
+#endif
+	return ret;
+}
+
 bool DBCache::updateUserInfo(UserInfo &info) {
     int userId = info.mUserID;
     if (userId == -1) {
@@ -132,9 +156,11 @@ bool DBCache::updateUserInfo(UserInfo &info) {
     }
 
     try {
-        SQLite::Statement query(db, "REPLACE INTO userinfo(id, name) VALUES (?,?)");
+        SQLite::Statement query(db, "REPLACE INTO userinfo(id, name, floor, perm) VALUES (?,?,?,?)");
         query.bind(1, info.mUserID);
         query.bind(2, info.mUserName);
+        query.bind(3, info.floor);
+        query.bind(4, info.perm);	
         query.exec();
     } catch (std::exception&) {
         std::cout << "sqlit error: " << db.getErrorMsg() << " in func DBCache::updateUserInfo" << std::endl;
@@ -176,21 +202,18 @@ bool DBCache::updateFaceInfo(FaceInfo &info) {
         return false;
     }
 
-#if 1
+#ifndef BUILD_FACTORY_TEST_APP
     int found = isFaceInfoExists(info);
     if (found >= 0) {
 		ERROR_CODE ret_code = GpdelItem(handle, found);
 		ret_code = GpinsertItem(handle, blob, 512, (uint64_t)found);
-        //memcpy(mFeatureMaps + found * 128, info.mFeatureMap, 512 * sizeof(float));
         std::cout << "replace face info" << ret_code << std::endl;
         return true;
     } else {
         mNumber++;
         mUserIDs = static_cast<int *>(realloc(mUserIDs, mNumber * sizeof(int)));
-        //mFeatureMaps = static_cast<int *>(realloc(mFeatureMaps, mNumber * 512 * sizeof(float)));
         mUserIDs[mNumber-1] = info.mUserID;
 		ERROR_CODE ret_code = GpinsertItem(handle, blob, 512, (uint64_t)info.mUserID);
-        //memcpy(mFeatureMaps + (mNumber - 1)*512, info.mFeatureMap,  512 * sizeof(float));
         std::cout << "insert face info" << info.mUserID << std::endl;
         return true;
     }
@@ -276,13 +299,14 @@ bool DBCache::updatePermissionInfo(PermissionInfo &info) {
 
 UserInfo DBCache::getUserInfoByFeatureMapsIdx(size_t idx) {
     UserInfo userInfo;
-    std::cout << "invaild idx in func DBCache::getUserInfoByFeatureMapsIdx "<< idx << std::endl;
+    std::cout << "idx in func DBCache::getUserInfoByFeatureMapsIdx "<< idx << std::endl;
     getUserInfo(idx, userInfo);
     return userInfo;
 }
 
 int DBCache::filter(float *featureMap)
 {
+#ifndef BUILD_FACTORY_TEST_APP
 	uint64_t face_id = 0;
 	float result;
 	size_t size;
@@ -290,11 +314,12 @@ int DBCache::filter(float *featureMap)
 	if(size != 0){
 		ret_code = GpqueryItem(handle, featureMap, 512, &result, &face_id);
 		std::cout << "filter result " << result << " face_id " << face_id << std::endl;
-		if(result>60)
+		if(result >= 60.0f)
 			return face_id;
 		else
 			return -1;
 	}
+#endif
 	return -1;
 }
 

@@ -6,6 +6,7 @@
 #include "net/RtspServer.h"
 #include "net/RtpInstance.h"
 #include "net/MediaSession.h"
+#include <time.h>
 
 class RtspServer;
 
@@ -52,6 +53,7 @@ private:
     bool createRtpOverTcp(MediaSession::TrackId trackId, int sockfd, uint8_t rtpChannel);
 
     void handleRtpOverTcp();
+	void get_date(char* buf);
 
 private:
     RtspServer* mRtspServer;

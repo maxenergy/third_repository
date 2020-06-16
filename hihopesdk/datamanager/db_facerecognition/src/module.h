@@ -19,8 +19,11 @@ public:
 class UserInfo{
 public:
     int mUserID;
-    std::string mUserName;
-    UserInfo() : mUserID(-1), mUserName("null"){}
+    std::string mUserName;	
+	int mTrackID;
+	int floor;
+	int perm;
+    UserInfo() : mUserID(-1), mUserName("null"), mTrackID(-1),floor(1),perm(0){}
 };
 typedef std::vector<UserInfo> UserInfoList;
 

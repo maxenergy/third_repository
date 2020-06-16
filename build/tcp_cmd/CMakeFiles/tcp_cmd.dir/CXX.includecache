@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/media/alik/180307/3559a/aipc/tcp_cmd/tcp_cmd.cpp
+tcp_cmd.h
+/media/alik/180307/3559a/aipc/tcp_cmd/tcp_cmd.h
+
+/media/alik/180307/3559a/aipc/tcp_cmd/tcp_cmd.h
+stdio.h
+-
+stdlib.h
+-
+unistd.h
+-
+pthread.h
+-
+arpa/inet.h
+-
+sys/types.h
+-
+sys/socket.h
+-
+netinet/tcp.h
+-
+sys/types.h
+-
+sys/stat.h
+-
+string.h
+-
+thread
+-
+

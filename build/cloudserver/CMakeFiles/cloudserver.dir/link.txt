@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcloudserver.a  CMakeFiles/cloudserver.dir/src/cloud_server.cpp.o CMakeFiles/cloudserver.dir/mqtt_client/src/mqtt.c.o CMakeFiles/cloudserver.dir/mqtt_client/src/mqtt_client.cpp.o CMakeFiles/cloudserver.dir/mqtt_client/src/mqtt_message.cpp.o
+/usr/bin/ranlib libcloudserver.a

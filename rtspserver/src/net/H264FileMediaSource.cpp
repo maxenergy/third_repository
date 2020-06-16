@@ -34,6 +34,8 @@ H264FileMediaSource::H264FileMediaSource(UsageEnvironment* env, const std::strin
 
     for(int i = 0; i < DEFAULT_FRAME_NUM; ++i)
         mEnv->threadPool()->addTask(mTask);
+#else
+	setFps(30);
 #endif
 }
 

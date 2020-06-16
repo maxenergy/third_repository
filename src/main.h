@@ -22,13 +22,33 @@
 #include "facerecognition_public.h"
 #include "facedetect.h"
 #include <mutex>
-#include "HttpServerlib.h"
-#include "http-server-lib.h"
+#include "tcp_cmd.h"
+#include <opencv2/opencv.hpp>
+#include "cloud_server.h"
+#include "rs485.h"
 
+#include <unistd.h>
+#include "watchdog.h"
+#include <sys/ioctl.h>
+#include <dirent.h>
+#include <net/if.h>
+#include<signal.h>
+#include <execinfo.h>
+#include <sys/stat.h>
 
+//#define BUILD_SYSTEM_DEMO
 
+#define WDT_DEV_FILE "/dev/watchdog"
+#define FACE_UPPATH "FtpUp"
+#define TCP_CMD_PORT  1314
 #define MAX_INFO_SIZE 24
 #define FACE_RECORD 0x11
+
+//¨¦¨¨¡À?id?¨¹??1??¨°:custom_id+mac+devtype
+#define CUSTOM_ID  "WXZQ"
+#define DEV_TYPE 01
+//customid:WXZQ
+//devtype:01 ¨¦???¨ª¡¤ 02 ??¡ã??¨²
 
 typedef struct _Face_Recognition_Item{
 	int x0;
@@ -49,8 +69,7 @@ typedef struct __AI_Box{
 	uint8_t y0;
 	uint8_t x1;
 	uint8_t y1;
-	uint8_t ID_H;
-	uint8_t ID_L;
+	unsigned int userid;
 }AI_Box;
 
 typedef struct __AI_Data{
@@ -60,10 +79,73 @@ typedef struct __AI_Data{
 }AI_Data;
 
 
-std::mutex data_mutex;
+enum param_index{
+	PARAM_INDEX_CAM_ROUTE = 0,
+	PARAM_INDEX_CAM_FLIP,
+	PARAM_INDEX_TESTFLAG,
+	PARAM_INDEX_MQTT_UPTOPIC,
+	PARAM_INDEX_MQTT_DOWNTOPIC,
+	PARAM_INDEX_FTP_SERVER_IP,
+	PARAM_INDEX_FTP_SERVER_PORT,
+	PARAM_INDEX_FTP_USERNAME,
+	PARAM_INDEX_FTP_PASSWD,
 
+	PARAM_INDEX_MQTT_SERVER_IP,
+	PARAM_INDEX_MQTT_SERVER_PORT,
+	PARAM_INDEX_MQTT_USERNAME,
+	PARAM_INDEX_MQTT_PASSWD,
+	
+	PARAM_INDEX_OTA_MQTT_DOWNTOPIC,
+	PARAM_INDEX_OTA_MQTT_SERVER_IP,
+	PARAM_INDEX_OTA_MQTT_SERVER_PORT,
+	PARAM_INDEX_OTA_MQTT_USERNAME,
+	PARAM_INDEX_OTA_MQTT_PASSWD,
+	
+	PARAM_INDEX_OTA_FTP_SERVER_IP,
+	PARAM_INDEX_OTA_FTP_SERVER_PORT,
+	PARAM_INDEX_OTA_FTP_USERNAME,
+	PARAM_INDEX_OTA_FTP_PASSWD,
+	
+	PARAM_INDEX_G_DEVICE_SN,
+	PARAM_INDEX_SW_VER,
+	PARAM_INDEX_HW_VER
+};
+
+#define MAX_PARAM_SIZE 20
+
+char fixed_dev_sn[MAX_PARAM_SIZE];
+
+char mqtt_uptopic[MAX_PARAM_SIZE];
+char mqtt_downtopic[MAX_PARAM_SIZE];
+
+char ftp_serverip[MAX_PARAM_SIZE];
+int ftp_server_port;
+char ftp_user[MAX_PARAM_SIZE];
+char ftp_passwd[MAX_PARAM_SIZE];
+
+char  mqtt_server_ip[MAX_PARAM_SIZE];
+int  mqtt_server_port;
+char  mqtt_user[MAX_PARAM_SIZE];
+char  mqtt_passwd[MAX_PARAM_SIZE];
+
+char ota_mqtt_downtopic[MAX_PARAM_SIZE];
+
+char ota_mqtt_server_ip[MAX_PARAM_SIZE];
+int ota_mqtt_server_port;
+char ota_mqtt_user[MAX_PARAM_SIZE];
+char ota_mqtt_passwd[MAX_PARAM_SIZE];
+
+char ota_ftp_serverip[MAX_PARAM_SIZE];
+int ota_ftp_server_port;
+char ota_ftp_user[MAX_PARAM_SIZE];
+char ota_ftp_passwd[MAX_PARAM_SIZE];
+char g_device_sn[MAX_PARAM_SIZE];
+
+uint8_t sw_ver = 0x1;
+uint8_t hw_ver = 0x1;
+
+std::mutex data_mutex;
 FaceRecognitionApi *framework;
-HttpServerLibApi *http_proxy;
 
 UsageEnvironment* env;
 RtspServer* server;
@@ -74,6 +156,50 @@ int box_count = 0;
 unsigned long buf_index =0;
 std::thread rtsp_push_loop;
 unsigned char* loop_buf;
-void process_detectet(FaceDetect::Msg bob);
-int process_cmd(http_message_t *message);
+Tcp_Cmd * tcp_cmd;
+int clean_flag = 0;
+cloud_server *Aiot_server;
 
+int last_sec = 0;
+int last_min = 0;
+
+int current_sec = 0;
+int current_min = 0;
+int wdt_alive_flag = 0;
+
+int camroute = 0;
+int camflip = 0;
+int test_flag;
+int ota_stoped =0;
+rs485_port *prs485;
+
+std::mutex mFifo_Mutex;
+
+std::list<Save_file*> save_file_fifo;
+
+std::thread save_file_loop;
+
+std::thread aiot_setup_once;
+
+std::thread wdt_loop;
+
+std::thread log_manager_loop;
+
+
+std::thread ota_setup_once;
+void thread_ota_setup();
+
+void checkota();
+void setup_env();
+void register_sig();
+void HandleSig(int signum);
+void eth0_ifconfig();
+int process_aiotevent(down_event event);
+void thread_save_file();
+void thread_wdt_loop();
+void thread_aiot_setup();
+int  tcp_ota_func(char* cmd);
+int update_face(Face_Upstream_First* cmd_buf);
+void process_detectet(FaceDetect::Msg bob);
+void vendor_checkota();
+void thread_log_manager();

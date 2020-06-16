@@ -32,8 +32,7 @@ public:
     bool isStartMulticast();
     std::string getMulticastDestAddr() const { return mMulticastAddr; }
     uint16_t getMulticastDestRtpPort(TrackId trackId);
-
-private:
+    uint32_t get_sink_ssrc(){return rtpsinksscr;}; 
     class Track
     {
     public:
@@ -44,6 +43,8 @@ private:
     };
 
     Track* getTrack(MediaSession::TrackId trackId);
+
+private:
     static void sendPacketCallback(void* arg1, void* arg2, RtpPacket* rtpPacket);
     void sendPacket(MediaSession::Track* tarck, RtpPacket* rtpPacket);
 
@@ -55,6 +56,7 @@ private:
     std::string mMulticastAddr;
     RtpInstance* mMulticastRtpInstances[MEDIA_MAX_TRACK_NUM];
     RtcpInstance* mMulticastRtcpInstances[MEDIA_MAX_TRACK_NUM];
+	uint32_t rtpsinksscr=0;
 };
 
 #endif //_MEDIASESSION_H_

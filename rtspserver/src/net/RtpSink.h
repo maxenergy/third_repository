@@ -24,7 +24,8 @@ public:
 
 	virtual void push264(uint8_t* frame_h264,int size,char* ext_data,int exlen,unsigned int timestamp) = 0;
     void setSendFrameCallback(SendPacketCallback cb, void* arg1, void* arg2);
-
+    uint32_t get_msscr(){return mSSRC;};
+	uint16_t get_seq(){return mSeq;};
 protected:
     virtual void handleFrame(AVFrame* frame) = 0;
     void sendRtpPacket(RtpPacket* packet);

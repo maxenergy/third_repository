@@ -7,11 +7,10 @@ FaceRecognitionApi::FaceRecognitionApi() {
 }
 
 bool FaceRecognitionApi::init() {
-    mDBCache = new DBCache();
+	mDBCache = new DBCache();
     if (!mDBCache->init()) {
         return false;
     }
-
 #ifdef arm64
     mCamera = new Camera("MipiCamera");
 #else
@@ -46,8 +45,9 @@ bool FaceRecognitionApi::init() {
 #ifdef IR_CAMERA
 	mFaceDetectService->mCamera_IR = mCamera_IR;
 #endif
+    mFaceDetectService->setPreviewCallBack(std::bind(&FaceRecognitionApi::handleFaceDetectServiceResult_detect, this, std::placeholders::_1));
 
-    mFaceDetectService->setPreviewCallBack(std::bind(&FaceRecognitionApi::handleFaceDetectServiceResult, this, std::placeholders::_1));
+	mFaceDetectService->setRecognitionCallBack(std::bind(&FaceRecognitionApi::handleFaceDetectServiceResult_Reconition, this, std::placeholders::_1));
 
     mFaceAttendance = new FaceAttendance();
     mFaceRecognition = new FaceRecognition();
@@ -59,23 +59,51 @@ void FaceRecognitionApi::setModel(int model) {
     mModel = model;
 }
 
-void FaceRecognitionApi::handleFaceDetectServiceResult(FaceDetect::Msg bob) {
-    //mPreviewCallback(bob.mFrame.mFrameData);
-    
+
+
+void FaceRecognitionApi::handleFaceDetectServiceResult_detect(FaceDetect::Msg bob) { 
+	int keep_flag = 0;
+    std::unique_lock<std::mutex> locker(mMutex);
+	int db_size = mTmp_FaceDB.size();
+   for(int i = 0; i<db_size; i++)
+   {
+   		keep_flag = 0;
+		UserInfo item = mTmp_FaceDB.front();
+		mTmp_FaceDB.pop_front();
+		for(int j = 0; j< bob.mMtcnnInterfaceOut.mOutList.size();j++)
+		{
+			if(bob.mMtcnnInterfaceOut.mOutList[j].mTrackID == item.mTrackID)
+			{
+				keep_flag = 1;
+				bob.mMtcnnInterfaceOut.mOutList[j].mUserID = item.mUserID;
+				bob.mMtcnnInterfaceOut.mOutList[j].mUserName = item.mUserName;
+				bob.mMtcnnInterfaceOut.mOutList[j].tracking_flag = 1;
+			}
+		}
+		if(keep_flag){
+			mTmp_FaceDB.push_back(item);
+		}else{
+			printf("remove track id %d \n",item.mTrackID);
+		}
+   }
+   mFaceDetectService->trigger_frg(bob.mMtcnnInterfaceOut);
+   if(mPreviewCallback != NULL)
+    	mPreviewCallback(bob);
+}
+
+void FaceRecognitionApi::handleFaceDetectServiceResult_Reconition(FaceDetect::Msg bob) { 
+#if 1	
     std::vector<UserInfo> users;
     mFaceRecognition->handleFaceRecognitionResult(bob, users);
-	mPreviewCallback(bob);
-
-//    if (mModel == FaceAttendanceMode) {
-//        mFaceAttendance->userDetect(users);
-//    }
-//    if (mModel == FaceAccessControlModel) {
-//        mFaceAccessControl->userDetect(users);
-//    }
-
-//    for (UserInfo user : users) {
-//        std::cout << user.mUserName << std::endl;
-//    }
+	for (size_t i = 0; i < users.size(); i++) {
+		UserInfo &info = users[i];
+		if(info.mUserID != -1){
+			 std::unique_lock<std::mutex> locker(mMutex);
+			 mTmp_FaceDB.push_back(info);
+			 printf("add track id %d TmpDb_size %d \n",info.mTrackID,mTmp_FaceDB.size());
+		}
+	}
+#endif
 }
 
 
@@ -90,6 +118,13 @@ bool FaceRecognitionApi::getUserInfo(int userID, UserInfo &info) {
 bool FaceRecognitionApi::updateUserInfo(UserInfo &info) {
     return mDBCache->updateUserInfo(info);
 }
+
+
+bool FaceRecognitionApi::delface(int userid){
+	return mDBCache->delface(userid);
+}
+
+
 
 bool FaceRecognitionApi::updateFaceInfo(FaceInfo &info) {
     return mDBCache->updateFaceInfo(info);
@@ -112,6 +147,33 @@ bool FaceRecognitionApi::updateFaceInfo(int userId, VIFrame &facePhoto) {
         std::cout << "detect failed in func FaceRecognitionApi::updateFaceInfo" << std::endl;
         return false;
     }
+
+	if(msg.mMtcnnInterfaceOut.mOutList.size() > 1)
+	{
+		printf("More Than One face!\n");
+		return false;
+	}
+
+	if(msg.mMtcnnInterfaceOut.mOutList.size()<1)
+	{
+		printf("not find face!\n");
+		return false;
+	}
+
+	msg.mMtcnnInterfaceOut.mOutList[0].tracking_flag = 0x33;
+
+    if (!mFaceDetect->facenetDetect(msg)) {
+        std::cout << "facenetdetect failed in func FaceRecognitionApi::updateFaceInfo" << std::endl;
+        return false;
+    }
+
+
+	if(msg.mFaceNetInterfaceOut.mOutList[0].mScore <= 0.5)
+	{
+		printf("bad face %f !\n",msg.mFaceNetInterfaceOut.mOutList[0].mScore);
+		return false;
+	}
+
 	#if 0
     if (msg.mFaceNetInterfaceOut.mOutList.empty()) {
         std::cout << "detect nothing in func FaceRecognitionApi::updateFaceInfo" << std::endl;
@@ -120,8 +182,8 @@ bool FaceRecognitionApi::updateFaceInfo(int userId, VIFrame &facePhoto) {
 	#endif
     FaceInfo info;
     info.mUserID = userId;
-    for (MtcnnOut item : msg.mMtcnnInterfaceOut.mOutList) {
-        memcpy(info.mFeatureMap, item.faceinfo.mFeatureMap, 512 * sizeof (float));
+    for (FaceNetOut item : msg.mFaceNetInterfaceOut.mOutList) {
+        memcpy(info.mFeatureMap, item.mFeatureMap, 512 * sizeof (float));
     }
 	//msg.mMtcnnInterfaceOut.mOutList.clear();
     return updateFaceInfo(info);

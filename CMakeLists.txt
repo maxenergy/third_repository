@@ -10,13 +10,27 @@ cmake_minimum_required(VERSION 2.8)
 
 SET(BOARD_TYPE "IPC")
 
+#SET(WM_BUILD_TYPE "Official")
+SET(WM_BUILD_TYPE "factory")
+SET(SDK_VER "2v0")
+
 SET(CMAKE_CXX_FLAGS  "-g -mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")
 
 #include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/business/facerecognition)
-include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/include)
-include_directories(${CMAKE_SOURCE_DIR}/rtspserver/src/)
-include_directories(${CMAKE_SOURCE_DIR}/http_cmd/inc)
+if("${SDK_VER}" STREQUAL "1v0")
+include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/sdk1v0/include)
+SET(sdk_libpath ${CMAKE_SOURCE_DIR}/hihopesdk/libs/lib3516/lib/sdk1v0)
+else()
+include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/sdk2v0/include)
+SET(sdk_libpath ${CMAKE_SOURCE_DIR}/hihopesdk/libs/lib3516/lib/sdk2v0)
+endif()
 
+include_directories(${CMAKE_SOURCE_DIR}/rtspserver/src/)
+
+include_directories(${CMAKE_SOURCE_DIR}/tcp_cmd)
+include_directories(${CMAKE_SOURCE_DIR}/cloudserver/src)
+include_directories(${CMAKE_SOURCE_DIR}/cloudserver/mqtt_client/src)
+include_directories(${CMAKE_SOURCE_DIR}/rs485_port)
 add_definitions(-Darm)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/out)
@@ -28,15 +42,25 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/out)
 
 ADD_SUBDIRECTORY(hihopesdk)
 ADD_SUBDIRECTORY(rtspserver)
-ADD_SUBDIRECTORY(http_cmd)
+ADD_SUBDIRECTORY(tcp_cmd)
+ADD_SUBDIRECTORY(cloudserver)
+ADD_SUBDIRECTORY(rs485_port)
 
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib)
-link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib3516/lib)
+link_directories(${sdk_libpath}/)
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/opencv/lib_arm)
 
-add_executable(aipc src/main.cpp)
+if("${WM_BUILD_TYPE}" STREQUAL "factory")
+message("factory BUILD ,only for camtest!")
+add_definitions(-DBUILD_FACTORY_TEST_APP)
 
-target_link_libraries( aipc hihopesdk rtspserver http_cmd -ldl -lpthread pola gomp)
+add_executable(aipc src/main.cpp)
+target_link_libraries( aipc hihopesdk rtspserver cloudserver rs485 tcp_cmd -ldl -lpthread)
+else()
+message("Official BUILD !")
+add_executable(aipc src/main.cpp)
+target_link_libraries( aipc hihopesdk rtspserver cloudserver rs485 tcp_cmd -ldl -lpthread pola gomp)
+endif()
 
 
 target_link_libraries(aipc 
@@ -56,6 +80,8 @@ target_link_libraries(aipc
 -lopencv_videoio             
 -lopencv_video             
 -lopencv_videostab
--lmpi
--lisp
+#-lmpi
+#-lisp
 )
+
+

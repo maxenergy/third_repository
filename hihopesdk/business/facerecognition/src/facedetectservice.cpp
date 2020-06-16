@@ -10,6 +10,7 @@ FaceDetectService::FaceDetectService(FaceDetect *faceRecognition, int maxAcquire
     mQueue = new FrameQueue(maxAcquiredBufferCount, maxDequeuedBufferCount);
     mConsumer = new FrameQueueConsumer(mQueue);
     mProducer = new FrameQueueProducer(mQueue);
+	
 }
 
 FaceDetectService::~FaceDetectService() {
@@ -20,6 +21,12 @@ void FaceDetectService::setPreviewCallBack(
         PreviewCallback callback) {
     mPreviewCallback = callback;
 }
+
+void FaceDetectService::setRecognitionCallBack(
+        PreviewCallback callback) {
+    mRecognitionCallback = callback;
+}
+
 
 bool FaceDetectService::start() {
     if (!mCamera->isVaild()) {
@@ -32,11 +39,18 @@ bool FaceDetectService::start() {
     });
     mCameraReadTask->start();
 
-    mFaceDetectTask0 = new Task([&]()-> bool {
+    mFaceDetectTask = new Task([&]()-> bool {
         faceDetectLoop(0);
         return true;
     });
-    mFaceDetectTask0->start();
+    mFaceDetectTask->start();
+
+	mFaceRecognitionTask = new Task([&]()-> bool {
+        faceRecognitionLoop(0);
+        return true;
+    });
+    mFaceRecognitionTask->start();
+
 
     mHandler = new Handler();
     return true;
@@ -48,14 +62,14 @@ void FaceDetectService::stop() {
         free(mCameraReadTask);
     }
 
-    if (mFaceDetectTask0 != nullptr) {
-        mFaceDetectTask0->stop();
-        free(mFaceDetectTask0);
+    if (mFaceDetectTask != nullptr) {
+        mFaceDetectTask->stop();
+        free(mFaceDetectTask);
     }
 
-    if (mFaceDetectTask1 != nullptr) {
-        mFaceDetectTask1->stop();
-        free(mFaceDetectTask1);
+    if (mFaceRecognitionTask != nullptr) {
+        mFaceRecognitionTask->stop();
+        free(mFaceRecognitionTask);
     }
 
     if (mHandler != nullptr) {
@@ -66,28 +80,54 @@ void FaceDetectService::stop() {
 
 void FaceDetectService::cameraReadLoop() {
     Frame frame;
-    
-	if(mPipe.is_empty()){
+#ifdef BUILD_FACTORY_TEST_APP
+	usleep(1000*10);
+#endif
+	if(mPipe.size() <= 2){
 #ifdef IR_CAMERA
     	mCamera_IR->read(frame.mRawdata,frame.IR_mRawdata);
 #else
 		mCamera->read(frame.mRawdata);
 #endif
-    	mPipe.push(frame);
+		if(mPipe_frg.size() <= 10){
+    		mPipe.push(frame);
+		}else{
+			frame.mRawdata.release();
+#ifdef IR_CAMERA
+			frame.IR_mRawdata.release();
+#endif
+		}
 	}
 }
 
 
+void FaceDetectService::trigger_frg(MtcnnInterface::Out mtcnn_out)
+{
+		mPipe_frg.push(mtcnn_out);
+}
+
 void FaceDetectService::faceDetectLoop(int device) {
     FaceDetect::Msg bob;
     bob.mFrame = mPipe.pop();
-    bob.mFacenetDeviceCoreId = device;
     mFaceRecognition->detect(bob);
+    if (mPreviewCallback != nullptr) {
+        mPreviewCallback(bob);
+    }
+		
 	bob.mFrame.mRawdata.release();
 #ifdef IR_CAMERA
 	bob.mFrame.IR_mRawdata.release();
 #endif
-    if (mPreviewCallback != nullptr) {
-        mPreviewCallback(bob);
+}
+
+void FaceDetectService::faceRecognitionLoop(int device) {
+    FaceDetect::Msg bob;
+    bob.mMtcnnInterfaceOut = mPipe_frg.pop();
+    bob.mFacenetDeviceCoreId = device;
+    mFaceRecognition->facenetDetect(bob);
+    if(mRecognitionCallback != nullptr) {
+        mRecognitionCallback(bob);
     }
 }
+
+

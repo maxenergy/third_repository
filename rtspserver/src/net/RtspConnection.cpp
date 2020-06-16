@@ -380,6 +380,7 @@ bool RtspConnection::handleCmdOption()
     return true;
 }
 
+//Media Attribute (a): recvonly
 bool RtspConnection::handleCmdDescribe()
 {
     MediaSession* session = mRtspServer->loopupMediaSession(mSuffix);
@@ -403,7 +404,6 @@ bool RtspConnection::handleCmdDescribe()
             mCSeq,
             (unsigned int)sdp.size(),
             sdp.c_str());
-
     if(sendMessage(mBuffer, strlen(mBuffer)) < 0)
             return false;
 
@@ -413,6 +413,8 @@ bool RtspConnection::handleCmdDescribe()
 bool RtspConnection::handleCmdSetup()
 {
     char sessionName[100];
+	char dbuf[255];
+	get_date(dbuf);
     if(sscanf(mSuffix.c_str(), "%[^/]/", sessionName) != 1)
     {
         return false;
@@ -456,12 +458,13 @@ bool RtspConnection::handleCmdSetup()
             snprintf((char*)mBuffer, sizeof(mBuffer),
                         "RTSP/1.0 200 OK\r\n"
                         "CSeq: %d\r\n"
-                        "Transport: RTP/AVP/TCP;unicast;interleaved=%hhu-%hhu\r\n"
+                        "Transport: RTP/AVP/TCP;unicast;interleaved=%hhu-%hhu;ssrc=%u;mode=\"play\"\r\n"
                         "Session: %08x\r\n"
                         "\r\n",
                         mCSeq,
                         mRtpChannel,
                         mRtpChannel+1,
+                        session->get_sink_ssrc(),
                         mSessionId);
         }
         else //rtp over udp
@@ -499,17 +502,44 @@ bool RtspConnection::handleCmdSetup()
 
     return true;
 }
+//RTP-Info: url=trackID=0;seq=53411,url=trackID=2;seq=10331\r\n
+//Date:  Fri, Jun 07 2020 22:30:22 GMT\r\n
+
+void RtspConnection::get_date(char* buf)
+{
+    time_t tt = time(NULL);
+    struct tm* ptime = NULL;
+    ptime = gmtime(&tt);
+    if (NULL == ptime )
+    {
+        printf("gmtime return null!\n");
+        return;
+    }
+
+    if (strftime(buf, sizeof(buf), "Date: %a, %b %d %Y %H:%M:%S GMT\r\n", ptime))
+    {
+        return;
+    }
+
+    return;
+}
+
 
 bool RtspConnection::handleCmdPlay()
 {
+    MediaSession* session = mRtspServer->loopupMediaSession(mSuffix);
+	char dbuf[255];
+	get_date(dbuf);
     snprintf((char*)mBuffer, sizeof(mBuffer),
             "RTSP/1.0 200 OK\r\n"
             "CSeq: %d\r\n"
             "Range: npt=0.000-\r\n"
             "Session: %08x; timeout=60\r\n"
+            "RTP-Info: url=trackID=0;seq=%u\r\n"
             "\r\n",
             mCSeq,
-            mSessionId);
+            mSessionId,
+            session->getTrack(MediaSession::TrackId0)->mRtpSink->get_seq());
 
     if(sendMessage(mBuffer, strlen(mBuffer)) < 0)
         return false;

@@ -33,7 +33,11 @@ private:
     time_t mLastTime;
 
     MtcnnService *mMtcnn;
-    FaceNetService *mFaceNets[2];
+#ifdef DUAL_CORE_NNIE
+	FaceNetService *mFaceNets[2];
+#else	
+    FaceNetService *mFaceNets;
+#endif
 
     float mScale = 1;
     bool mFilterMaxFaceEnable;

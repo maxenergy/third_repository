@@ -7,12 +7,16 @@ return true;
 bool MppPipe::info(int pipe, int chn) {
     VIDEO_FRAME_INFO_S frame;
     memset(&frame, 0, sizeof(frame));
-    HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe, chn, &frame, 2000);
+   // HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe, chn, &frame, 2000);
+   
+   HI_S32 ret =HI_MPI_VPSS_GetChnFrame(pipe, chn, &frame, 2000);
     if (ret != HI_SUCCESS) {
         printf("[hihope] HI_MPI_VI_GetChnFrame Failed: %#x\n", ret);
         return false;
     }
     dumpFrame(frame);
+	
+    HI_MPI_VPSS_ReleaseChnFrame(pipe, chn, &frame);
     return true;
 }
 
@@ -21,7 +25,8 @@ bool MppPipe::getFrame(VIFrame &outFrame, int pipe, int chn, int timeout) {
     memset(&frame, 0, sizeof(frame));
     frame.u32PoolId = VB_INVALID_POOLID;
 
-    HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe, chn, &frame, timeout);
+   // HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe, chn, &frame, timeout);
+    HI_S32 ret =HI_MPI_VPSS_GetChnFrame(pipe, chn, &frame, timeout);
     if (ret != HI_SUCCESS) {
         printf("[hihope]HI_MPI_VI_GetChnFrame Failed: %#x\n", ret);
     }

@@ -39,6 +39,11 @@ public:
             mCondEmpty.notify_all();
         }
     }
+	
+	int size() {
+				std::unique_lock<std::mutex> locker(mMutex);
+				return mFifo.size();
+		}
 
 	bool is_empty()
     {

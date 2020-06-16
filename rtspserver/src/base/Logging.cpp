@@ -7,7 +7,7 @@
 #include "base/Logging.h"
 #include "base/AsyncLogging.h"
 
-Logger::LogLevel Logger::mLogLevel = Logger::LogDebug;
+Logger::LogLevel Logger::mLogLevel = Logger::LogError;
 std::string Logger::mLogFile = "/dev/stdout";
 bool Logger::mIsStdout = true;
 
