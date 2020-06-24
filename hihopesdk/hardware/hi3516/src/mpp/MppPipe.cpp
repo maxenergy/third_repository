@@ -25,7 +25,6 @@ bool MppPipe::getFrame(VIFrame &outFrame, int pipe, int chn, int timeout) {
     memset(&frame, 0, sizeof(frame));
     frame.u32PoolId = VB_INVALID_POOLID;
 
-   // HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe, chn, &frame, timeout);
     HI_S32 ret =HI_MPI_VPSS_GetChnFrame(pipe, chn, &frame, timeout);
     if (ret != HI_SUCCESS) {
         printf("[hihope]HI_MPI_VI_GetChnFrame Failed: %#x\n", ret);

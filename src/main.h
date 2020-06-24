@@ -35,6 +35,10 @@
 #include<signal.h>
 #include <execinfo.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include "zbar.h" 
+#include <vector>
+
 
 //#define BUILD_SYSTEM_DEMO
 
@@ -44,11 +48,11 @@
 #define MAX_INFO_SIZE 24
 #define FACE_RECORD 0x11
 
-//¨¦¨¨¡À?id?¨¹??1??¨°:custom_id+mac+devtype
+//devid:custom_id+mac+devtype
 #define CUSTOM_ID  "WXZQ"
 #define DEV_TYPE 01
 //customid:WXZQ
-//devtype:01 ¨¦???¨ª¡¤ 02 ??¡ã??¨²
+//devtype:01 - 02
 
 typedef struct _Face_Recognition_Item{
 	int x0;
@@ -152,7 +156,10 @@ RtspServer* server;
 MediaSession* session;
 RtpSink* rtpSink;
 AI_Box FRI[32];
+AI_Box XDI[32];
+
 int box_count = 0;
+int box_count_obj = 0;
 unsigned long buf_index =0;
 std::thread rtsp_push_loop;
 unsigned char* loop_buf;
@@ -181,13 +188,20 @@ std::thread save_file_loop;
 
 std::thread aiot_setup_once;
 
+std::thread ir_cut_thread;
+
 std::thread wdt_loop;
 
 std::thread log_manager_loop;
 
 
 std::thread ota_setup_once;
+
+std::thread qrcode_loop;
+
 void thread_ota_setup();
+
+void thread_ircut();
 
 void checkota();
 void setup_env();
@@ -198,8 +212,12 @@ int process_aiotevent(down_event event);
 void thread_save_file();
 void thread_wdt_loop();
 void thread_aiot_setup();
+void thread_qrcode_setup();
 int  tcp_ota_func(char* cmd);
 int update_face(Face_Upstream_First* cmd_buf);
 void process_detectet(FaceDetect::Msg bob);
 void vendor_checkota();
 void thread_log_manager();
+void process_xdetectet(FaceDetect::Msg bob);
+bool scan_image(cv::Mat &img_in);
+

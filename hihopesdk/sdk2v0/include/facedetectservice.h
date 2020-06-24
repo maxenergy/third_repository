@@ -17,6 +17,8 @@ public:
     bool start();
     void setPreviewCallBack(PreviewCallback callback);
 	void setRecognitionCallBack(PreviewCallback callback);
+	void setObjDetectCallBack(PreviewCallback callback);
+
 	//void setPreviewCallBack1(PreviewCallback1 callback);
 	void trigger_frg(MtcnnInterface::Out mtcnn_out);
 
@@ -39,6 +41,7 @@ public:
 
     Camera *mCamera;
 	Camera *mCamera_IR;
+	Camera *mCamera_obj;
     Handler *mHandler;
     FrameQueue *mQueue;
     FrameQueueConsumer *mConsumer;
@@ -47,6 +50,8 @@ public:
 
     PreviewCallback mPreviewCallback;
 	PreviewCallback mRecognitionCallback;
+	PreviewCallback mObjDetectCallback;
+
 	//PreviewCallback1 mPreviewCallback1;
     Pool<FaceDetect::Msg> mOut;
     NoblockPipe<Frame, 3> mPipe;

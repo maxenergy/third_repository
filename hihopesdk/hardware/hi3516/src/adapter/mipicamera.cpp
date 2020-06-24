@@ -3,14 +3,9 @@
 #include <stdio.h>
 #include <arm_neon.h>
 #define chn 0
-
 bool MipiCamera::open(int video) {
     mIdx = video;
     if (MppPipe::init(mIdx, chn) == false) {
-        return false;
-    }
-
-    if (MppPipe::info(mIdx, chn) == false) {
         return false;
     }
 
@@ -30,6 +25,14 @@ bool MipiCamera::read(VIFrame &viFrame) {
     };
     return true;
 }
+
+bool MipiCamera::read(int vpss_channel,VIFrame &viFrame) {
+    if (MppPipe::getFrame(viFrame, mIdx, vpss_channel, -1) == false) {
+        return false;
+    };
+    return true;
+}
+
 
 bool MipiCamera::read(VIFrame &viFrame_bgr,VIFrame &viFrame_ir){
 	if (MppPipe::getFrame(viFrame_bgr,viFrame_ir, 0, 2, chn, -1) == false) {

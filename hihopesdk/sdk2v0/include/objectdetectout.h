@@ -8,8 +8,10 @@
 class ObjectDetectOut {
 public:
     char  mName[20];
-    float mBox[4];
+    int mBox[4];
     float mScore;
+	int obj_id;
+
 
     std::string toString() {
         std::stringstream ss;

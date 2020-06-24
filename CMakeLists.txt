@@ -31,6 +31,7 @@ include_directories(${CMAKE_SOURCE_DIR}/tcp_cmd)
 include_directories(${CMAKE_SOURCE_DIR}/cloudserver/src)
 include_directories(${CMAKE_SOURCE_DIR}/cloudserver/mqtt_client/src)
 include_directories(${CMAKE_SOURCE_DIR}/rs485_port)
+include_directories(${CMAKE_SOURCE_DIR}/zbar/include)
 add_definitions(-Darm)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/out)
@@ -49,6 +50,7 @@ ADD_SUBDIRECTORY(rs485_port)
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib)
 link_directories(${sdk_libpath}/)
 link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/opencv/lib_arm)
+link_directories(${PROJECT_SOURCE_DIR}/zbar/lib)
 
 if("${WM_BUILD_TYPE}" STREQUAL "factory")
 message("factory BUILD ,only for camtest!")
@@ -80,6 +82,7 @@ target_link_libraries(aipc
 -lopencv_videoio             
 -lopencv_video             
 -lopencv_videostab
+-lzbar
 #-lmpi
 #-lisp
 )

@@ -28,6 +28,12 @@ void FaceDetectService::setRecognitionCallBack(
 }
 
 
+void FaceDetectService::setObjDetectCallBack(
+        PreviewCallback callback) {
+    mObjDetectCallback = callback;
+}
+
+
 bool FaceDetectService::start() {
     if (!mCamera->isVaild()) {
         return false;
@@ -51,6 +57,13 @@ bool FaceDetectService::start() {
     });
     mFaceRecognitionTask->start();
 
+#ifdef ZQ_DETECT_E-BICYCLE
+	mXDetectTask = new Task([&]()-> bool {
+        XDetectLoop(0);
+        return true;
+    });
+    mXDetectTask->start();
+#endif
 
     mHandler = new Handler();
     return true;
@@ -97,6 +110,20 @@ void FaceDetectService::cameraReadLoop() {
 			frame.IR_mRawdata.release();
 #endif
 		}
+
+		if(mPipe_obj.size() == 0)
+		{
+			Frame frame_cpy;
+			mCamera->read(1,frame_cpy.mRawdata);
+			//printf("read pic %d %d \n",frame_cpy.mRawdata.mHeiht,frame_cpy.mRawdata.mWidth);
+			//frame_cpy.mRawdata.mHeiht = frame.mRawdata.mHeiht;
+			//frame_cpy.mRawdata.mWidth= frame.mRawdata.mWidth;
+			//frame_cpy.mRawdata.mSize = frame.mRawdata.mSize;
+			//frame_cpy.mRawdata.mFormat = frame.mRawdata.mFormat;
+			//frame_cpy.mRawdata.mData =(unsigned char *)malloc(frame_cpy.mRawdata.mSize);
+			mPipe_obj.push(frame_cpy);
+		}
+			
 	}
 }
 
@@ -128,6 +155,18 @@ void FaceDetectService::faceRecognitionLoop(int device) {
     if(mRecognitionCallback != nullptr) {
         mRecognitionCallback(bob);
     }
+}
+
+void FaceDetectService::XDetectLoop(int device)
+{
+	FaceDetect::Msg bob;
+	bob.mFrame = mPipe_obj.pop();
+    mFaceRecognition->objdetect(bob);
+	bob.mFrame.mRawdata.release();
+	if(mObjDetectCallback !=nullptr)
+	{
+		mObjDetectCallback(bob);
+	}
 }
 
 

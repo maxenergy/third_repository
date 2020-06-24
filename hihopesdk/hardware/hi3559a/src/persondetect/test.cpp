@@ -50,9 +50,9 @@ int count_box_size(cl_kernel *kernel,int len,SAMPLE_SVP_NNIE_YOLOV2_BBOX_S *out_
 void opencl_get_box(int *InputBlob,int len,int stride,float *af32Bias,SAMPLE_SVP_NNIE_YOLOV2_BBOX_S *out_box,int class_num)
 {
 
-	int each_box_infer_num = (class_num+5) *3;
-	int input_size = (each_box_infer_num-1)*len*stride/4 + stride * (len-1)/4 + (len-1);
-	int NUM = each_box_infer_num * len * len;
+	int each_box_infer_num = (class_num+5) *3; //Ã¿Ò»žöÔ€²â£¬°üÀš (5 + class num ) * 3
+	int input_size = (each_box_infer_num-1)*len*stride/4 + stride * (len-1)/4 + (len-1); //ÊäÈëµÄŽóÐ¡
+	int NUM = each_box_infer_num * len * len; //13 x 13 * 85 ×ÜµÄÊýŸÝ³€¶È 
 	int out_box_size = len * len * 3;
 	float output[NUM];
     cl_int    status;

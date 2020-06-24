@@ -18,11 +18,13 @@ public:
     bool start();
     void setPreviewCallBack(PreviewCallback callback);
 	void setRecognitionCallBack(PreviewCallback callback);
+	void setObjDetectCallBack(PreviewCallback callback) ;
 	//void setPreviewCallBack1(PreviewCallback1 callback);
 	void trigger_frg(MtcnnInterface::Out mtcnn_out);
     void cameraReadLoop();
     void faceDetectLoop(int device);
 	void faceRecognitionLoop(int device);
+	void XDetectLoop(int device);
 //    void mtcnnDetectLoop();
 //    void facenetDetectLoop(int device);
 
@@ -34,9 +36,11 @@ public:
     Task *mCameraReadTask;
     Task *mFaceDetectTask;
     Task *mFaceRecognitionTask;
+	 Task *mXDetectTask;
 
     Camera *mCamera;
 	Camera *mCamera_IR;
+	Camera *mCamera_obj;
     Handler *mHandler;
     FrameQueue *mQueue;
     FrameQueueConsumer *mConsumer;
@@ -45,10 +49,12 @@ public:
 
     PreviewCallback mPreviewCallback;
 	PreviewCallback mRecognitionCallback;
+	PreviewCallback mObjDetectCallback;
 	//PreviewCallback1 mPreviewCallback1;
     Pool<FaceDetect::Msg> mOut;
     NoblockPipe<Frame, 3> mPipe;
 	NoblockPipe<MtcnnInterface::Out, 20> mPipe_frg;
+	NoblockPipe<Frame, 1> mPipe_obj;
 };
 
 #endif // FACERECOGNITIONNETSERVICE_H

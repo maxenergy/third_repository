@@ -10,6 +10,11 @@ namespace A {
 #include <stdio.h>
 #include <vector>
 #include <math.h>
+#include <sys/time.h>
+
+void yolv3nniealikInit();
+void yolv3nniealikDetect(cv::Mat &image , ObjectDetectInterface::Out &out);
+
 
 #define ADD_FACE_NO_LIVENESSCHECK
 
@@ -28,7 +33,17 @@ static std::default_random_engine sRandom;
 
 DummyNetImpl_IMPLEMENT(MtcnnDummyImpl, MtcnnInterface, "mtcnn");
 DummyNetImpl_IMPLEMENT(FaceNeDummyImpl, FaceNetInterface, "facenet");
-DummyNetImpl_IMPLEMENT(ObjectDetectDummyImpl, ObjectDetectInterface, "objectdetect");
+
+ReflectObject_SpecRegister_IMPLEMENT(ObjectDetectDummyImpl, AIInterface::getName("dummy" , "objectdetect")); \
+bool ObjectDetectDummyImpl::load(int device) { 
+	std::cout << "dummy objectdetect load \n"; 
+#ifndef BUILD_FACTORY_TEST_APP
+	yolv3nniealikInit();
+#endif
+	return true; 
+}
+
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,12 +55,12 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-/*?ì2a1y3ì*/
-/*í???detect,track,è?oó3?box*/
-/*handle ?íê?±e*/
-/*ê?±e?ì2a?Ppose,pose ·?o?ì??t?ò3??á1?*/
-/*?á1?oíID??ó|￡?·?è??óáD*/
-/*track μ?μ?id è￥?òò?óDê?±e?á1?,id ?aê§′ó?óáDà???é?3y??ê?±e?á1?*/
+/*检测过程*/
+/*图片detect,track,然后出box*/
+/*handle 送识别*/
+/*识别检测錚pose,pose 符合条件则出结果*/
+/*结果和ID对应，放入队列*/
+/*track 到的id 去找已有识别结果,id 丢失从队列里面删除该识别结果*/
 #ifdef BUILD_FACTORY_TEST_APP
 bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) {
     usleep(30*1000);
@@ -56,6 +71,12 @@ bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out
     usleep(30*1000);
 	return true;
 }
+
+bool ObjectDetectDummyImpl::detect(int device, Frame &frame, ObjectDetectInterface::Out &out) {
+	usleep(30*1000);
+	return true;
+}
+
 
 #else
 bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) {
@@ -176,19 +197,27 @@ bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out
 		
     return true;
 }
-#endif
 
 bool ObjectDetectDummyImpl::detect(int device, Frame &frame, ObjectDetectInterface::Out &out) {
-    int counts =  sRandom() % 20;
-	std::cout << "face detect 3 " << std::endl;
-    for(int i = 0; i< counts; i++) {
-        ObjectDetectOut item;
-        sprintf(item.mName, "person");
-        out.mOutList.push_back(item);
+    if (frame.mRawdata.empty()) {
+        return false;
     }
-    usleep(10*1000);
+	struct timeval start_time;
+	struct timeval stop_time;
+	gettimeofday(&start_time, NULL);
+  	cv::Mat yuvFrame = cv::Mat(frame.mRawdata.mHeiht*3/2, frame.mRawdata.mWidth, CV_8UC1, frame.mRawdata.mData);
+	cv::Mat rgbImage;
+	cv::cvtColor(yuvFrame, rgbImage, cv::COLOR_YUV420sp2BGR);
+	cv::Mat detectImage;
+	resize(rgbImage, detectImage, cv::Size(416, 416), 0, 0, 0);
+	yolv3nniealikDetect(detectImage, out);
+	gettimeofday(&stop_time, NULL);
+	printf("cost %ld ms \n",(stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000);
     return true;
 }
+#endif
+
+
 
 #if 0
 bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) {

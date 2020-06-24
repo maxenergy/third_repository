@@ -17,6 +17,7 @@ public:
 	bool read(unsigned char *frame);
 	bool read(VIFrame &viFrame);
 	bool read(VIFrame &viFrame_bgr,VIFrame &viFrame_ir);
+	bool read(int vpss_channel,VIFrame &viFrame);
 
     bool isVaild();
     void release();

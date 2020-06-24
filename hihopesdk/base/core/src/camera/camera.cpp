@@ -122,6 +122,27 @@ bool Camera::read(VIFrame &frame) {
 }
 
 
+bool Camera::read(int vpss_channel,VIFrame &frame) {
+    if (mImpl == nullptr) {
+        return false;
+    }
+    bool ret = mImpl->read(vpss_channel,frame);
+    if (!ret) {
+        std::cout << "[alik] WARNING!!! blank frame grabbed" << std::endl;
+    }
+#if 0
+    mCnt++;
+    if (mCnt >= 100) {
+        mCurTime = time(nullptr);
+        std::cout << "camera fps: " << mCnt/(mCurTime-mLastTime) << std::endl;
+        mCnt = 0;
+        mCost = 0;
+        mLastTime = mCurTime;
+    }
+#endif
+    return ret;
+}
+
 bool Camera::read(VIFrame &viFrame_bgr,VIFrame &viFrame_ir){
     if (mImpl == nullptr) {
         return false;

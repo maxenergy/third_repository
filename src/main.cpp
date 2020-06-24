@@ -1,6 +1,6 @@
 #include "main.h"
 #include "sample_comm.h"
-
+#include "mpi_awb.h"
 extern "C" {
 extern int sysinit(int *fd_out,int mroute,int mflip);
 extern void log_level_set(int level);
@@ -8,7 +8,7 @@ extern void init_pola_sdk(int liveless_mode,float detect_threshold,int test_flag
 extern  HI_VOID SAMPLE_COMM_VENC_RegCallback(VENC_CHN vencChn, SAMPLE_VENC_CALLBACK_S *callBack);
 }
 
-#define GPIO_IR_LED_IN      54
+#define GPIO_IR_LED_IN      2
 #define GPIO_MIR_S0 		4
 #define GPIO_MIR_S1 		5
 
@@ -45,10 +45,11 @@ void venc_h264_callback(unsigned char *ph264,int size)
 
 	//get ai data
 	data_mutex.lock();
-	count = box_count;
+	count = box_count+box_count_obj;
 	xdata_buf =(unsigned char *)malloc(count*sizeof(AI_Box)+1);
 	xdata_buf[0] = count;
-	memcpy(xdata_buf+1,FRI,count*sizeof(AI_Box));
+	memcpy(xdata_buf+1,FRI,box_count*sizeof(AI_Box));
+	memcpy(xdata_buf+1+box_count*sizeof(AI_Box),XDI,box_count_obj*sizeof(AI_Box));
 	data_mutex.unlock();
 
 	if((count)||(clean_flag)){
@@ -199,9 +200,12 @@ int main()
 	save_file_loop=std::thread(&thread_save_file);
 	save_file_loop.detach();
 
-	aiot_setup_once=std::thread(&thread_aiot_setup);
+	aiot_setup_once = std::thread(&thread_aiot_setup);
 	aiot_setup_once.detach();
 
+    ir_cut_thread = std::thread(&thread_ircut);
+	ir_cut_thread.detach();
+	
 	FaceRecognitionApi &framework = FaceRecognitionApi::getInstance();
 	 if (!framework.init()) {
 		 printf("framework init failed \n");
@@ -212,6 +216,15 @@ int main()
 	framework.setCameraPreviewCallBack([&](FaceDetect::Msg bob){
 	process_detectet(bob);
 	});
+
+#ifdef ZQ_DETECT_E-BICYCLE
+	framework.setXdetectCallBack([&](FaceDetect::Msg bob){
+	process_xdetectet(bob);
+	});
+#endif
+	qrcode_loop = std::thread(&thread_qrcode_setup);
+	qrcode_loop.detach();
+	
  //   Logger::setLogLevel(Logger::LogWarning);
     EventScheduler* scheduler = EventScheduler::createNew(EventScheduler::POLLER_SELECT);
  
@@ -235,14 +248,31 @@ int main()
 }
 #endif
 
-
+void thread_qrcode_setup()
+{
+	bool scan_ret = false;
+	printf("qrcode thread started!\n");
+	while(1)
+	{
+		sleep(1);
+		VIFrame mBtnPhoto;
+		FaceRecognitionApi::getInstance().capture(1,mBtnPhoto);
+		cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
+		cv::Mat rgbImage;
+		cv::Mat grayImage;
+		cv::cvtColor(yuvFrame, rgbImage, cv::COLOR_YUV420sp2RGB);
+		cv::cvtColor(rgbImage,grayImage , cv::COLOR_RGB2GRAY);
+		scan_ret = scan_image(grayImage);
+		mBtnPhoto.release();
+	}
+}
 void save_box(MtcnnInterface::Out list)
 {
 	int i =0;
 	int cpysize = 0;
 	data_mutex.lock();
 	for (MtcnnOut box : list.mOutList) {
-	 if(i > 20)
+	 if(i > 15)
 	 	break;
      FRI[i].x0 = (unsigned char)(box.mRect.tl().x*255.f/1920.f);
 	 FRI[i].y0 = (unsigned char)(box.mRect.tl().y*255.f/1080.f);
@@ -254,6 +284,26 @@ void save_box(MtcnnInterface::Out list)
 	box_count = i;
 	data_mutex.unlock();
 }
+
+
+void save_box_obj(ObjectDetectInterface::Out list)
+{
+	int i =0;
+	data_mutex.lock();
+	for (ObjectDetectOut box : list.mOutList) {
+	 if(i > 5)
+	 	break;
+     XDI[i].x0 = (unsigned char)(box.mBox[0]*255.f/1920.f);
+	 XDI[i].y0 = (unsigned char)(box.mBox[2]*255.f/1080.f);
+     XDI[i].x1 = (unsigned char)(box.mBox[1]*255.f/1920.f);
+	 XDI[i].y1 = (unsigned char)(box.mBox[3]*255.f/1080.f);
+	 XDI[i].userid= htonl(box.obj_id);
+	 i++;
+	}
+	box_count_obj = i;
+	data_mutex.unlock();
+}
+
 
 void get_msg_info(up_event *item)
 {
@@ -272,62 +322,25 @@ void get_msg_info(up_event *item)
 	item->sec = t->tm_sec;
 	sprintf(item->file_name,"%s%4d%02d%02d%02d%02d%02d.jpg",g_device_sn,t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 }
-
-
-void YVU420P_TO_BGR24(unsigned char *data, unsigned char *rgb, int width, int height) {
-	int index = 0;
-	unsigned char *ybase = data;
-	unsigned char *uvbase = &data[width * height];
-	unsigned char *ubase = &data[width * height+width * height/4];
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-		//YYYYVU
-			 unsigned char Y = ybase[x + y * width];
-			 unsigned char V = uvbase[y / 2 * width + (x / 2)*2];
-			 unsigned char U = uvbase[y / 2 * width + (x / 2)*2+1];
-
-			
-			int r = (float)Y + 1.4075 * ((float)V - 128);
-			if(r >255)
-				r = 255;
-			else if(r <0)
-				r =0;
-
-			int g = (float)Y - 0.3455 * ((float)U - 128) - 0.7169 * ((float)V - 128); //G
-			if(g >255)
-				g = 255;
-			else if(g <0)
-				g =0;
-
-			
-			int b = (float)Y + 1.779 * ((float)U - 128); //B
-			if(b >255)
-				b = 255;
-			else if(b <0)
-				b =0;
-			
-			rgb[index++] = b;
-			rgb[index++] = g; //G
-			rgb[index++] = r; //B
-		}
-	}
-}
-
 void save_pic(char* name)
 {
 	VIFrame mBtnPhoto;
 	char full_name[255];
-	unsigned char* rgb_buf;
-	FaceRecognitionApi::getInstance().capture(mBtnPhoto);
-    rgb_buf = (unsigned char*)malloc(mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
-	printf("mBtnPhoto.mHeiht %d mBtnPhoto.mWidth %d \n",mBtnPhoto.mHeiht,mBtnPhoto.mWidth);	
-    YVU420P_TO_BGR24(mBtnPhoto.mData,rgb_buf,mBtnPhoto.mWidth,mBtnPhoto.mHeiht);
-	cv::Mat src =  cv::Mat(mBtnPhoto.mHeiht, mBtnPhoto.mWidth,CV_8UC3, rgb_buf);
+	//unsigned char* rgb_buf;
+	FaceRecognitionApi::getInstance().capture(2,mBtnPhoto);
+//	struct timeval start_time;
+//	struct timeval stop_time;
+
+	cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
 	cv::Mat dstImage;
-	resize(src,dstImage,cv::Size(src.cols/5,src.rows/5),0,0,cv::INTER_LINEAR);
+//	 gettimeofday(&start_time, NULL);
+	 cv::cvtColor(yuvFrame, dstImage, cv::COLOR_YUV420sp2BGR);
+	// gettimeofday(&stop_time, NULL);
+	// printf("cost %ld ms \n",(stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000);
+
 	sprintf(full_name,"%s/%s",FACE_UPPATH,name);
 	cv::imwrite(full_name, dstImage);
-	free(rgb_buf);
+	mBtnPhoto.release();
 }
 
 void print_timeinfo()
@@ -366,7 +379,7 @@ void thread_aiot_setup()
 	}
 }
 
-#define LOG_TIME_PRESEC 120  // 2 分钟打印一次系统时间
+#define LOG_TIME_PRESEC 120
 
 int FileSize(const char* fname)
 {
@@ -416,7 +429,107 @@ void thread_ota_setup()
 	}
 }
 
+int gpio_read(int gpio_id)
+{
+	FILE *fp = 0;
+	char state = 0;
+	int ret =-1;
+	char file_name[255];
+	sprintf(file_name,"/sys/class/gpio/gpio%d/value",gpio_id);
+	fp = fopen(file_name,"r");
+	if(fp > 0)
+	{
+		ret = fread(&state,1,1,fp);
+	}
+	fclose(fp);
+	return (state - 0x30);
+}
 
+void gpio_write(int gpio,int on_off)
+{
+	FILE *fp = 0;
+	char state = 0x30 + on_off;
+	int ret =-1;
+	char file_name[255];
+	sprintf(file_name,"/sys/class/gpio/gpio%d/value",gpio);
+	fp = fopen(file_name,"r+");
+	if(fp > 0)
+	{
+		ret = fwrite(&state,1,1,fp);
+	}
+	fclose(fp);
+}
+
+int get_irled_state()
+{
+	int state = 0;
+	state =  gpio_read(GPIO_IR_LED_IN);
+	if(state == 0)
+		return 1;
+	else
+		return 0;
+}
+
+
+
+void set_ircut(int on_off)
+{
+	if(on_off){
+		 gpio_write(GPIO_MIR_S1,0);
+		 gpio_write(GPIO_MIR_S0,1);
+	}else{
+		 gpio_write(GPIO_MIR_S1,1);
+		 gpio_write(GPIO_MIR_S0,0);
+	}
+	usleep(1000*120);
+	gpio_write(GPIO_MIR_S1,0);
+    gpio_write(GPIO_MIR_S0,0);
+}
+
+void thread_ircut()
+{
+	int ir_st = 0;
+	int ir_cut_st = 0;
+	int on_count = 0;
+	int off_count = 0;
+	ISP_SATURATION_ATTR_S color_attr;
+	ISP_SATURATION_ATTR_S gray_attr;
+	HI_MPI_ISP_GetSaturationAttr(0,&color_attr);
+	gray_attr.enOpType = OP_TYPE_MANUAL;
+	gray_attr.stManual.u8Saturation = 0;
+	system("echo 2 > /sys/class/gpio/export");
+	system("echo \"in\" > /sys/class/gpio/gpio2/direction");
+	system("echo 4 > /sys/class/gpio/export");
+	system("echo \"out\" > /sys/class/gpio/gpio4/direction");
+	system("echo 5 > /sys/class/gpio/export");
+	system("echo \"out\" > /sys/class/gpio/gpio5/direction");
+	set_ircut(0);
+	while(1)
+	{
+		usleep(1000*200);
+		ir_st = get_irled_state();
+		if(ir_st == 1){
+			if(ir_cut_st == 0){
+				if(++on_count > 3){
+					set_ircut(1);
+					ir_cut_st = 1;
+					HI_MPI_ISP_SetSaturationAttr(0,&gray_attr);
+				}
+			}
+			off_count = 0;
+		}else{
+			if(ir_cut_st == 1){
+				if(++off_count > 3){
+					set_ircut(0);
+					ir_cut_st = 0;
+					HI_MPI_ISP_SetSaturationAttr(0,&color_attr);
+				}
+			}
+			on_count = 0;
+		}
+	}
+
+}
 void thread_save_file()
 {
 	while(1)
@@ -517,14 +630,22 @@ void update_iot(FaceDetect::Msg &bob)
 
 }
 
-
-
 void process_detectet(FaceDetect::Msg bob)
 {
 	save_box(bob.mMtcnnInterfaceOut);
 	update_iot(bob);
 	return;
 }
+
+
+#ifdef ZQ_DETECT_E-BICYCLE
+void process_xdetectet(FaceDetect::Msg bob)
+{
+	save_box_obj(bob.mObjDetectOut);
+	return;
+}
+#endif
+
 /*
 int process_cmd(http_message_t *message)
 {
@@ -1173,5 +1294,26 @@ void register_sig()
 	signal(SIGABRT, HandleSig);
 }
 
+bool scan_image(cv::Mat &img_in)
+{
+	zbar::ImageScanner scanner;    
+	scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);   
+	int width = img_in.cols;    
+	int height = img_in.rows;    
+	uchar *raw = (uchar *)img_in.data;       
+	zbar::Image image(width, height, "Y800", raw, width * height);      
+	int n = scanner.scan(image);      
+    zbar::Image::SymbolIterator symbol = image.symbol_begin();    
+    if(image.symbol_begin()==image.symbol_end())    
+    {    
+		return false;
+    }    
+    for(;symbol != image.symbol_end();++symbol)      
+    {        
+    	printf("get a qrcode: type %s ,data: %s \n",symbol->get_type_name().c_str(),\
+			symbol->get_data().c_str()); 
+    } 
+	return true;
+}
 
 

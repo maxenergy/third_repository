@@ -9,6 +9,7 @@ add_definitions(-DBUILD_SDK1V0)
 else()
 include_directories(${CMAKE_SOURCE_DIR}/sdk2v0/include)
 add_definitions(-DBUILD_SDK2V0)
+add_definitions(-DZQ_DETECT_YOLOV3)
 endif()
 
 AUX_SOURCE_DIRECTORY(base/core/src/ai  HIHOPE_SRCS)
@@ -23,7 +24,8 @@ AUX_SOURCE_DIRECTORY(hardware/dummy/src HIHOPE_SRCS)
 
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/adapter HIHOPE_SRCS)
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/mpp HIHOPE_SRCS)
-
+AUX_SOURCE_DIRECTORY(hardware/hi3516/src/nnie HIHOPE_SRCS)
+AUX_SOURCE_DIRECTORY(hardware/hi3516/src/yolov3 HIHOPE_SRCS)
 if("${SDK_VER}" STREQUAL "1v0")
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/common/sdk1v0 HIHOPE_SRCS)
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/mpp/sdk1v0 HIHOPE_SRCS)
@@ -176,7 +178,8 @@ add_library(libisp STATIC IMPORTED)
 set_property(TARGET libisp PROPERTY IMPORTED_LOCATION ${sdk_libpath}/libisp.a)
 
 
-
+add_library(libnnie STATIC IMPORTED)
+set_property(TARGET libnnie PROPERTY IMPORTED_LOCATION ${sdk_libpath}/libnnie.a)
 
 
 if("${SDK_VER}" STREQUAL "2v0")
@@ -214,7 +217,7 @@ else()
 target_link_libraries(hihopesdk SQLiteCpp  sqlite3 libisp lib_hicalcflicker Hi3516DV3_Nr)
 endif()
 target_link_libraries(hihopesdk  libmpi libdnvqe libhdmi lib_hiae lib_hiawb libsns_imx327 lib_hiawb_natura libhi_cipher lib_hidehaze lib_hidrc libhifisheyecalibrate lib_hildci libive libmd libsecurec libsvpruntime libtde libupvqe libVoiceEngine
-libsns_imx307_2l libsns_imx307 libsns_imx327_2l libsns_imx327 libsns_imx335  libsns_imx458 
+libsns_imx307_2l libsns_imx307 libsns_imx327_2l libsns_imx327 libsns_imx335  libsns_imx458  libnnie
   )
 #libsns_imx377
 #libsns_mn34220

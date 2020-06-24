@@ -70,6 +70,8 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 	VPSS_GRP		   VpssGrp		  = 0;
 	VPSS_GRP_ATTR_S	  stVpssGrpAttr;
 	VPSS_CHN 		  VpssChn		 = VPSS_CHN0;
+	VPSS_CHN 		  VpssChn1		 = VPSS_CHN1;
+	VPSS_CHN 		  VpssChn2		 = VPSS_CHN2;
 	HI_BOOL			  abChnEnable[VPSS_MAX_PHY_CHN_NUM] = {0};
 	VPSS_CHN_ATTR_S	  astVpssChnAttr[VPSS_MAX_PHY_CHN_NUM];
 
@@ -165,7 +167,42 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 	   astVpssChnAttr[VpssChn].bFlip					   = HI_FALSE;
 	   astVpssChnAttr[VpssChn].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
 
+
+		astVpssChnAttr[VpssChn1].u32Width				   = 960;
+		astVpssChnAttr[VpssChn1].u32Height				   = 540;
+		astVpssChnAttr[VpssChn1].enChnMode				   = VPSS_CHN_MODE_USER;
+		astVpssChnAttr[VpssChn1].enCompressMode			   = enCompressMode;
+		astVpssChnAttr[VpssChn1].enDynamicRange			   = enDynamicRange;
+		astVpssChnAttr[VpssChn1].enVideoFormat			   = enVideoFormat;
+		astVpssChnAttr[VpssChn1].enPixelFormat			   = enPixFormat;
+		astVpssChnAttr[VpssChn1].stFrameRate.s32SrcFrameRate = 30;
+		astVpssChnAttr[VpssChn1].stFrameRate.s32DstFrameRate = 30;
+		astVpssChnAttr[VpssChn1].u32Depth 				   = 1;
+		astVpssChnAttr[VpssChn1].bMirror					   = HI_FALSE;
+		astVpssChnAttr[VpssChn1].bFlip					   = HI_FALSE;
+		astVpssChnAttr[VpssChn1].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
+
+
+
+		astVpssChnAttr[VpssChn2].u32Width				   = 384;
+		astVpssChnAttr[VpssChn2].u32Height				   = 216;
+		astVpssChnAttr[VpssChn2].enChnMode				   = VPSS_CHN_MODE_USER;
+		astVpssChnAttr[VpssChn2].enCompressMode			   = enCompressMode;
+		astVpssChnAttr[VpssChn2].enDynamicRange			   = enDynamicRange;
+		astVpssChnAttr[VpssChn2].enVideoFormat			   = enVideoFormat;
+		astVpssChnAttr[VpssChn2].enPixelFormat			   = enPixFormat;
+		astVpssChnAttr[VpssChn2].stFrameRate.s32SrcFrameRate = 30;
+		astVpssChnAttr[VpssChn2].stFrameRate.s32DstFrameRate = 30;
+		astVpssChnAttr[VpssChn2].u32Depth 				   = 1;
+		astVpssChnAttr[VpssChn2].bMirror					   = HI_FALSE;
+		astVpssChnAttr[VpssChn2].bFlip					   = HI_FALSE;
+		astVpssChnAttr[VpssChn2].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
+
+		
+
 		abChnEnable[0] = HI_TRUE;
+		abChnEnable[1] = HI_TRUE;
+		abChnEnable[2] = HI_TRUE;
 		s32Ret = SAMPLE_COMM_VPSS_Start(VpssGrp, abChnEnable, &stVpssGrpAttr, astVpssChnAttr);
 		if (HI_SUCCESS != s32Ret)
 		{

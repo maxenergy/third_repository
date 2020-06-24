@@ -46,6 +46,11 @@ bool CameraInterface::read(VIFrame &){
 bool CameraInterface::read(VIFrame &,VIFrame &){
 	std::cout << "[Error!!!] Unsupport func. Please call from sub class" << std::endl;
 }
+bool CameraInterface::read(int vpss_channel,VIFrame &viFrame){
+
+std::cout << "[Error!!!] Unsupport func. Please call from sub class" << std::endl;
+
+}
 
 unsigned int CameraInterface::getWidth() {
     return mWidth;

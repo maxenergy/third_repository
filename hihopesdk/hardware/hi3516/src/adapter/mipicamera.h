@@ -12,6 +12,7 @@ public:
     virtual bool isVaild();
 	virtual bool read(VIFrame &viFrame);
 	virtual bool read(VIFrame &viFrame_bgr,VIFrame &viFrame_ir);
+	virtual bool read(int vpss_channel,VIFrame &viFrame);
 
 private:
     int mIdx;

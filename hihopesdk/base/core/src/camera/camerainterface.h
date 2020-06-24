@@ -18,6 +18,7 @@ public:
 	virtual bool read(unsigned char *frame);
     virtual bool read(VIFrame &viFrame);
 	virtual bool read(VIFrame &viFrame_brg,VIFrame &viFrame_ir);
+	virtual bool read(int vpss_channel,VIFrame &viFrame);
 
     virtual unsigned int getWidth();
     virtual unsigned int getHeight();

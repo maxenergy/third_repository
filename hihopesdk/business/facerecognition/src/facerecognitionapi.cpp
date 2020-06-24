@@ -49,6 +49,9 @@ bool FaceRecognitionApi::init() {
 
 	mFaceDetectService->setRecognitionCallBack(std::bind(&FaceRecognitionApi::handleFaceDetectServiceResult_Reconition, this, std::placeholders::_1));
 
+
+	mFaceDetectService->setObjDetectCallBack(std::bind(&FaceRecognitionApi::handleFaceDetectServiceResult_xdetect, this, std::placeholders::_1));
+
     mFaceAttendance = new FaceAttendance();
     mFaceRecognition = new FaceRecognition();
     mFaceAccessControl = new FaceAccessControl();
@@ -57,6 +60,12 @@ bool FaceRecognitionApi::init() {
 
 void FaceRecognitionApi::setModel(int model) {
     mModel = model;
+}
+
+
+void FaceRecognitionApi::handleFaceDetectServiceResult_xdetect(FaceDetect::Msg bob) { 
+   if(mXdetectCallback != NULL)
+    	mXdetectCallback(bob);
 }
 
 
@@ -110,6 +119,11 @@ void FaceRecognitionApi::handleFaceDetectServiceResult_Reconition(FaceDetect::Ms
 bool FaceRecognitionApi::capture(VIFrame &photo) {
     return mCamera != nullptr && mCamera->isVaild() && mCamera->read(photo);
 }
+
+bool FaceRecognitionApi::capture(int ch,VIFrame &photo) {
+    return mCamera != nullptr && mCamera->read(ch,photo);
+}
+
 
 bool FaceRecognitionApi::getUserInfo(int userID, UserInfo &info) {
     return mDBCache->getUserInfo(userID, info);
@@ -246,3 +260,8 @@ void FaceRecognitionApi::startCameraPreview() {
 void FaceRecognitionApi::setCameraPreviewCallBack(PreviewCallback func) {
     mPreviewCallback = func;
 }
+
+void FaceRecognitionApi::setXdetectCallBack(PreviewCallback func){
+	mXdetectCallback = func;
+}
+

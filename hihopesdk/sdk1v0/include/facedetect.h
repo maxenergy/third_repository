@@ -12,6 +12,7 @@ public:
         MtcnnInterface::Out mMtcnnInterfaceOut;
         MtcnnInterface::Out mMtcnnInterfaceOutOK;
         FaceNetInterface::Out mFaceNetInterfaceOut;
+		ObjectDetectInterface::Out mObjDetectOut;
         int mMtcnnDeviceCoreId;
         int mFacenetDeviceCoreId;
     };
@@ -23,6 +24,7 @@ public:
     bool detect(Msg &msg);
     bool mtcnnDetect(Msg &msg);
     bool facenetDetect(Msg &msg);
+	bool objdetect(Msg &bob);
 
     void drawRectangle(Msg &msg);
 
@@ -38,6 +40,8 @@ private:
 #else	
 		FaceNetService *mFaceNets;
 #endif
+	XDetectService * mXDetect;
+
     float mScale = 1;
     bool mFilterMaxFaceEnable;
 };

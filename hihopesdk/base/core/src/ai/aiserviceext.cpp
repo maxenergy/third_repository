@@ -5,3 +5,5 @@
 
 AISERVICE_IMPL(MtcnnService, "mtcnn");
 AISERVICE_IMPL(FaceNetService, "facenet");
+AISERVICE_IMPL(XDetectService, "objectdetect");
+

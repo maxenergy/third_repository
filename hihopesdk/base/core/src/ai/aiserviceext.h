@@ -13,5 +13,6 @@
 
 AISERVICE_DECLARATION(MtcnnService, MtcnnInterface)
 AISERVICE_DECLARATION(FaceNetService, FaceNetInterface)
+AISERVICE_DECLARATION(XDetectService, ObjectDetectInterface)
 
 #endif // AISERVICEEXT_H

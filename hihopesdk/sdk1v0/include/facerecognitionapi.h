@@ -18,9 +18,11 @@ public:
     typedef std::function<void(FaceDetect::Msg bob)> PreviewCallback;
     int mModel;
 	PreviewCallback mPreviewCallback;
+	PreviewCallback mXdetectCallback;
 
     Camera *mCamera;
 	Camera *mCamera_IR;
+	Camera *mCamera_obj;
 
 	std::mutex mMutex;
 	std::list<UserInfo> mTmp_FaceDB;
@@ -37,6 +39,7 @@ public:
     void setModel(int model);
 
     bool capture(VIFrame &photo);
+	bool capture(int ch,VIFrame &photo);
 
     bool getUserInfo(int userID, UserInfo &info);
     bool updateUserInfo(UserInfo &info);
@@ -54,11 +57,13 @@ public:
     void stopCameraPreview();
     void startCameraPreview();
     void setCameraPreviewCallBack(PreviewCallback func);
+	void setXdetectCallBack(PreviewCallback func);
 //	void setCameraPreviewCallBack1(PreviewCallback1 func);
 
 private:
     void handleFaceDetectServiceResult_detect(FaceDetect::Msg bob);
 	void handleFaceDetectServiceResult_Reconition(FaceDetect::Msg bob);
+	void handleFaceDetectServiceResult_xdetect(FaceDetect::Msg bob);
 
 
     Singleton_Decalartion(FaceRecognitionApi);

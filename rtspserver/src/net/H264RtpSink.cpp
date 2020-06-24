@@ -121,19 +121,19 @@ void H264RtpSink::handleFrame(AVFrame* frame,uint8_t flag_ex)
         mSeq++;
 		mExtension = 0;
 		mXdata_size = 0;
-        if ((naluType & 0x1F) == 7 || (naluType & 0x1F) == 8) // å¦‚æžœæ˜¯SPSã€PPSå°±ä¸éœ€è¦åŠ æ—¶é—´æˆ³
+        if ((naluType & 0x1F) == 7 || (naluType & 0x1F) == 8) // 如果是SPS、PPS就不需要加时间戳
             return;
     }
     else
     {
-        int pktNum = (frame->mFrameSize-5) / RTP_MAX_PKT_SIZE;       // æœ‰å‡ ä¸ªå®Œæ•´çš„åŒ…
-        int remainPktSize = (frame->mFrameSize-5) % RTP_MAX_PKT_SIZE; // å‰©ä½™ä¸å®Œæ•´åŒ…çš„å¤§å°
+        int pktNum = (frame->mFrameSize-5) / RTP_MAX_PKT_SIZE;       // 有几个完整的包
+        int remainPktSize = (frame->mFrameSize-5) % RTP_MAX_PKT_SIZE; // 剩余不完整包的大小
         int i = 0;
 		int pos = 0;
 
 		//send first pkt,add xdata
 		if(flag_ex){
-			mExtRtpHeadr->payload[0] = (naluType & 0x60) | 28; //(naluType & 0x60)è¡¨ç¤ºnaluçš„é‡è¦æ€§ï¼Œ28è¡¨ç¤ºä¸ºåˆ†ç‰‡
+			mExtRtpHeadr->payload[0] = (naluType & 0x60) | 28; //(naluType & 0x60)表示nalu的重要性，28表示为分片
 			
 			/*
 			*	   FU Header
@@ -144,12 +144,12 @@ void H264RtpSink::handleFrame(AVFrame* frame,uint8_t flag_ex)
 			* */
 			mExtRtpHeadr->payload[1] = naluType & 0x1F;
 			
-			if (i == 0) //ç¬¬ä¸€åŒ…æ•°æ
+			if (i == 0) //第一包数�
 			{
 				mExtRtpHeadr->payload[1] |= 0x80; // start
 				pos = pos+5;
 			}
-			else if (remainPktSize == 0 && i == pktNum - 1) //æœ€åŽä¸€åŒ…æ•°æ®
+			else if (remainPktSize == 0 && i == pktNum - 1) //最后一包数据
 			{
 				mExtRtpHeadr->payload[1] |= 0x40; // end
 				
@@ -172,7 +172,7 @@ void H264RtpSink::handleFrame(AVFrame* frame,uint8_t flag_ex)
 		}
 			
 
-        /* å‘é€å®Œæ•´çš„åŒ… */
+        /* 发送完整的包 */
         for (; i < pktNum; i++)
         {
             /*
@@ -182,7 +182,7 @@ void H264RtpSink::handleFrame(AVFrame* frame,uint8_t flag_ex)
             *   |F|NRI|  Type   |
             *   +---------------+
             * */
-            rtpHeader->payload[0] = (naluType & 0x60) | 28; //(naluType & 0x60)è¡¨ç¤ºnaluçš„é‡è¦æ€§ï¼Œ28è¡¨ç¤ºä¸ºåˆ†ç‰‡
+            rtpHeader->payload[0] = (naluType & 0x60) | 28; //(naluType & 0x60)表示nalu的重要性，28表示为分片
             
             /*
             *      FU Header
@@ -193,12 +193,12 @@ void H264RtpSink::handleFrame(AVFrame* frame,uint8_t flag_ex)
             * */
             rtpHeader->payload[1] = naluType & 0x1F;
             
-            if (i == 0) //ç¬¬ä¸€åŒ…æ•°æ®
+            if (i == 0) //第一包数据
             {
                 rtpHeader->payload[1] |= 0x80; // start
                 pos = pos+5;
             }
-            else if (remainPktSize == 0 && i == pktNum - 1) //æœ€åŽä¸€åŒ…æ•°æ®
+            else if (remainPktSize == 0 && i == pktNum - 1) //最后一包数据
             {
 				rtpHeader->payload[1] |= 0x40; // end
 				#ifdef WITH_MARK_BIT
@@ -217,7 +217,7 @@ void H264RtpSink::handleFrame(AVFrame* frame,uint8_t flag_ex)
             pos += RTP_MAX_PKT_SIZE;
         }
 
-        /* å‘é€å‰©ä½™çš„æ•°æ® */
+        /* 发送剩余的数据 */
         if (remainPktSize > 0)
         {
             rtpHeader->payload[0] = (naluType & 0x60) | 28;
@@ -254,16 +254,16 @@ void H264RtpSink::handleFrame(AVFrame* frame)
         sendRtpPacket(&mRtpPacket);
         mSeq++;
 
-        if ((naluType & 0x1F) == 7 || (naluType & 0x1F) == 8) // å¦‚æžœæ˜¯SPSã€PPSå°±ä¸éœ€è¦åŠ æ—¶é—´æˆ³
+        if ((naluType & 0x1F) == 7 || (naluType & 0x1F) == 8) // 如果是SPS、PPS就不需要加时间戳
             return;
     }
     else
     {
-        int pktNum = frame->mFrameSize / RTP_MAX_PKT_SIZE;       // æœ‰å‡ ä¸ªå®Œæ•´çš„åŒ…
-        int remainPktSize = frame->mFrameSize % RTP_MAX_PKT_SIZE; // å‰©ä½™ä¸å®Œæ•´åŒ…çš„å¤§å°
+        int pktNum = frame->mFrameSize / RTP_MAX_PKT_SIZE;       // 有几个完整的包
+        int remainPktSize = frame->mFrameSize % RTP_MAX_PKT_SIZE; // 剩余不完整包的大小
         int i, pos = 1;
 
-        /* å‘é€å®Œæ•´çš„åŒ… */
+        /* 发送完整的包 */
         for (i = 0; i < pktNum; i++)
         {
             /*
@@ -273,7 +273,7 @@ void H264RtpSink::handleFrame(AVFrame* frame)
             *   |F|NRI|  Type   |
             *   +---------------+
             * */
-            rtpHeader->payload[0] = (naluType & 0x60) | 28; //(naluType & 0x60)è¡¨ç¤ºnaluçš„é‡è¦æ€§ï¼Œ28è¡¨ç¤ºä¸ºåˆ†ç‰‡
+            rtpHeader->payload[0] = (naluType & 0x60) | 28; //(naluType & 0x60)表示nalu的重要性，28表示为分片
             
             /*
             *      FU Header
@@ -284,9 +284,9 @@ void H264RtpSink::handleFrame(AVFrame* frame)
             * */
             rtpHeader->payload[1] = naluType & 0x1F;
             
-            if (i == 0) //ç¬¬ä¸€åŒ…æ•°æ®
+            if (i == 0) //第一包数据
                 rtpHeader->payload[1] |= 0x80; // start
-            else if (remainPktSize == 0 && i == pktNum - 1) //æœ€åŽä¸€åŒ…æ•°æ®
+            else if (remainPktSize == 0 && i == pktNum - 1) //最后一包数据
                 rtpHeader->payload[1] |= 0x40; // end
 
             memcpy(rtpHeader->payload+2, frame->mFrame+pos, RTP_MAX_PKT_SIZE);
@@ -297,7 +297,7 @@ void H264RtpSink::handleFrame(AVFrame* frame)
             pos += RTP_MAX_PKT_SIZE;
         }
 
-        /* å‘é€å‰©ä½™çš„æ•°æ® */
+        /* 发送剩余的数据 */
         if (remainPktSize > 0)
         {
             rtpHeader->payload[0] = (naluType & 0x60) | 28;

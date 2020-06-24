@@ -18,6 +18,11 @@ FaceDetect::FaceDetect() {
 #else
 	mFaceNets = new FaceNetService("dummy");
 #endif
+
+#ifdef ZQ_DETECT_E-BICYCLE
+	mXDetect = new XDetectService("dummy");
+#endif
+
 #endif
 
     mFilterMaxFaceEnable = true;
@@ -39,6 +44,10 @@ bool FaceDetect::init() {
     ret = ret && mFaceNets[1] != nullptr && mFaceNets[1]->load(1) && mFaceNets[1]->isValid(1);
 #else
 	ret = ret && mFaceNets != nullptr && mFaceNets->load(0) && mFaceNets->isValid(0);
+#endif
+
+#ifdef ZQ_DETECT_E-BICYCLE
+	ret = ret && mXDetect != nullptr && mXDetect->load(0);
 #endif
 
     if (ret) {
@@ -114,7 +123,30 @@ bool FaceDetect::facenetDetect(Msg &bob) {
 	 }
     return true;
 }
+bool FaceDetect::objdetect(Msg &bob)
+{
+    bool ret(false);
+    if (bob.mFrame.mFrameData.empty()&&bob.mFrame.mRawdata.empty()) {
+        std::cout << "frame is empty int fun " << __FUNCTION__ << std::endl;
+        return ret;
+    }
+	if(mXDetect == NULL)
+		return false;
+	
+    ObjectDetectInterface::Out objdetectInterfaceOut;
+    ret = mXDetect->detect(0, bob.mFrame, objdetectInterfaceOut);
+    if (!ret) {
+        std::cout << "mXDetect net detect failed int fun " << __FUNCTION__ << std::endl;
+    }
+	if (objdetectInterfaceOut.mOutList.empty()) {
+		return true;
+	}
 
+	for (ObjectDetectOut box : objdetectInterfaceOut.mOutList) {
+		bob.mObjDetectOut.mOutList.push_back(box);
+	 }
+	return true;
+}
 void FaceDetect::drawRectangle(Msg &bob) {
 }
 
