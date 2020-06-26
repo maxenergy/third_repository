@@ -1285,6 +1285,13 @@ int save_DevConfig(const char *config_buffer)
     char QRdata[1024] = {0};
     char dev_config_data[1024] = {0};
 
+    /* judgement the security level */
+    if (!security_level)
+    {
+        printf("WARNING: This security level %d isn't allowed to set dev_config", security_level);
+	return 0;
+    }
+
     /* remove the header: "INITCAM:" */
     config_buffer += 8;
 
@@ -1297,6 +1304,16 @@ int save_DevConfig(const char *config_buffer)
     {
         char Key = (char)*temp;
         char *Value = temp+2;
+
+        temp = strtok(NULL, ";");
+
+        /* If Security_level is 1, only IP address could be set. */
+        if (!(((security_level == 1)&&((Key=='I')||(Key=='J')||(Key=='K')))||(security_level==2)))
+        {
+            printf("Tips: Current Security Level is %d, can't set Key %c\n", security_level, Key);
+            continue;
+        }
+
         switch(Key)
         {
             case 'A': /* MQTT server ip address */
@@ -1390,8 +1407,6 @@ int save_DevConfig(const char *config_buffer)
                 printf("ERROR: this key %s doesn't be supported now.\n", temp);
                 return -1;
         }
-
-        temp = strtok(NULL, ";");
     }
 
     /* open the orignal config file, If not exist, create it. */

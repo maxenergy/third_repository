@@ -31,6 +31,7 @@
 #define CMD_TYPE_DOWN_RESET 0xa3
 
 #define IOT_CMD_DEVICE_CTL 0x0
+#define IOT_CMD_DEVICE_SECURITY_LEVEL 0x1
 #define IOT_CMD_DEVICE_REGISTER 0x08
 #define IOT_CMD_DEVICE_DEL 0x09
 #define IOT_CMD_DEVICE_AUTHER 0x0A
@@ -74,6 +75,13 @@ typedef struct __CTL_Dev{
     uint8_t cmd_type;   //0
     uint8_t status;     //1-重新启动设备
 }Ctl_Dev;
+
+typedef struct __CTL_Dev_Security_Level{
+    uint8_t cmd_type;   //0
+    uint8_t level;      //0-Level 0:without level;1-Level 1:only set ip; 2-Level 2:set all;
+}Ctl_Dev_Security_Level;
+
+extern int security_level; /* Global variable for setting the init config file. Related with the aboved Ctl_Dev_Security_Level.*/
 
 typedef struct __CTL_User_Reg{
     uint8_t cmd_type;   //08
@@ -190,6 +198,8 @@ public:
 	
 	bool subscribe_device_control(const char *buffer);
 	
+	bool subscribe_device_security_level(const char *buffer);
+
 	bool subscribe_user_register_or_modify(const char *buffer);
 	
 	bool subscribe_user_delete(const char *buffer);

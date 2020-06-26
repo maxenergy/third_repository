@@ -577,6 +577,16 @@ bool cloud_server::subscribe_device_control(const char *buffer)
 	return ctl->status;
 }
 
+int security_level = 0;
+
+bool cloud_server::subscribe_device_security_level(const char *buffer)
+{
+	Ctl_Dev_Security_Level *sec_level = (Ctl_Dev_Security_Level *)buffer;
+	security_level = sec_level->level;
+	printf("device_security_level:Level- %d", sec_level->level);
+	return true;
+}
+
 bool cloud_server::subscribe_user_register_or_modify(const char *buffer)
 {
 	Ctl_User_Reg user;
@@ -716,6 +726,9 @@ bool cloud_server::mqttc_message_handler(MqttMsg *msg)
 	{
 		case IOT_CMD_DEVICE_CTL:
 			ret = subscribe_device_control(msg->payload);
+			break;
+		case IOT_CMD_DEVICE_SECURITY_LEVEL:
+			ret = subscribe_device_security_level(msg->payload);
 			break;
 		case IOT_CMD_DEVICE_REGISTER:
 			ret = subscribe_user_register_or_modify(msg->payload);
