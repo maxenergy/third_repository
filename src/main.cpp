@@ -173,11 +173,11 @@ int main()
 
 	wdt_loop = std::thread(&thread_wdt_loop);
     wdt_loop.detach();
-	eth0_ifconfig();
 	checkota();
 	ota_stoped = 1;
 	
 	setup_env();
+	eth0_ifconfig();
 	set_time();
 
     tcp_cmd = new Tcp_Cmd(TCP_CMD_PORT,update_face,tcp_ota_func);
@@ -260,12 +260,19 @@ void thread_qrcode_setup()
 		cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
 		cv::Mat rgbImage;
 		cv::Mat grayImage;
+		cv::Mat flipImage;
 		cv::cvtColor(yuvFrame, rgbImage, cv::COLOR_YUV420sp2RGB);
 		cv::cvtColor(rgbImage,grayImage , cv::COLOR_RGB2GRAY);
-		scan_ret = scan_image(grayImage);
+
+		if(camflip) /* camflip: 1-flip; */
+			cv::flip(grayImage, flipImage, 1);
+		else
+			flipImage = grayImage;
+		scan_ret = scan_image(flipImage);
 		mBtnPhoto.release();
 	}
 }
+
 void save_box(MtcnnInterface::Out list)
 {
 	int i =0;
@@ -864,70 +871,17 @@ int if_param_check(char* str)
 
 void eth0_ifconfig()
 {
-	int fd;
-	char data[25];
-	char if0[3];
-	char if1[3];
-	char if2[3];
-	char if3[3];
 	char ifcmd_buf[50];
-	memset(data,0,25);
+
+	/* set eth0 ip address */
 	memset(ifcmd_buf,0,50);
-	if(access("user_ipconfig", F_OK) == 0){
-	   fd = open("user_ipconfig", O_RDONLY);
-		if (fd < 0)
-		{
-			perror("file open user_ipconfig!\n ");    
-			return;
-		}
+	sprintf(ifcmd_buf,"ifconfig eth0 %s %s", camera_ip_addr, camera_ip_mask);
+	system(ifcmd_buf);
 
-		read(fd, data, 50);
-		char*temp = strtok(data,".");
-		int index=0;
-		while(temp)
-		{
-			if(!if_param_check(temp))
-			{
-				switch(index){
-					case 0:
-						memset(if0,0,3);
-						sprintf(if0,"%s",temp);
-						break;
-					case 1:
-						memset(if1,0,3);
-						sprintf(if1,"%s",temp);
-						break;
-					case 2:
-						memset(if2,0,3);
-						sprintf(if2,"%s",temp);
-						printf("%c %x \n",temp[0],temp[0]);
-						break;
-					case 3:
-						memset(if3,0,3);
-						sprintf(if3,"%s",temp);
-						break;
-					default:
-						break;
-				}
-				temp = strtok(NULL,".");
-                                index++;
-		    }else{
-				printf("error ip addr!\n");
-				return;
-			}
-				
-		}
-		sprintf(ifcmd_buf,"ifconfig eth0 %s.%s.%s.%s",if0,if1,if2,if3);
-                printf("if2 %c %x\n",if2[0],if2[0]);
-
-		printf("use default ip %s \n",ifcmd_buf);
-		system(ifcmd_buf);
-
-		memset(ifcmd_buf,0,50);
-		sprintf(ifcmd_buf," route add default gw %s.%s.%s.1",if0,if1,if2);
-
-		system(ifcmd_buf);	
-	}
+	/* set default gateway */
+	memset(ifcmd_buf,0,50);
+	sprintf(ifcmd_buf,"route add default gw %s", camera_ip_gateway);
+	system(ifcmd_buf);
 }
 
 void setup_env()
@@ -990,7 +944,7 @@ void setup_env()
 					printf("camflip is %d \n",camflip);
 					break;
 					
-	            case PARAM_INDEX_TESTFLAG:
+				case PARAM_INDEX_TESTFLAG:
 					test_flag =atoi(temp);
 					printf("test_flag is %d \n",test_flag);
 					break;
@@ -1158,6 +1112,36 @@ void setup_env()
 					printf("ota_ftp_passwd is %s \n",ota_ftp_passwd);
 					break;
 				
+				case PARAM_INDEX_CAMERA_IP_ADDR:
+					memset(camera_ip_addr,0,MAX_PARAM_SIZE);
+					if(param_check(temp)){
+						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+						break;
+					}
+					sprintf(camera_ip_addr,"%s",temp);
+					printf("camera_ip_addr is %s \n",camera_ip_addr);
+					break;
+
+				case PARAM_INDEX_CAMERA_IP_MASK:
+					memset(camera_ip_mask,0,MAX_PARAM_SIZE);
+					if(param_check(temp)){
+						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+						break;
+					}
+					sprintf(camera_ip_mask,"%s",temp);
+					printf("camera_ip_mask is %s \n",camera_ip_mask);
+					break;
+
+				case PARAM_INDEX_CAMERA_IP_GATEWAY:
+					memset(camera_ip_gateway,0,MAX_PARAM_SIZE);
+					if(param_check(temp)){
+						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+						break;
+					}
+					sprintf(camera_ip_gateway,"%s",temp);
+					printf("camera_ip_gateway is %s \n",camera_ip_gateway);
+					break;
+
 				case PARAM_INDEX_G_DEVICE_SN:
 					memset(g_device_sn,0,MAX_PARAM_SIZE);
 					if(param_check(temp)){
@@ -1294,26 +1278,181 @@ void register_sig()
 	signal(SIGABRT, HandleSig);
 }
 
-bool scan_image(cv::Mat &img_in)
+int save_DevConfig(const char *config_buffer)
 {
-	zbar::ImageScanner scanner;    
-	scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);   
-	int width = img_in.cols;    
-	int height = img_in.rows;    
-	uchar *raw = (uchar *)img_in.data;       
-	zbar::Image image(width, height, "Y800", raw, width * height);      
-	int n = scanner.scan(image);      
-    zbar::Image::SymbolIterator symbol = image.symbol_begin();    
-    if(image.symbol_begin()==image.symbol_end())    
-    {    
-		return false;
-    }    
-    for(;symbol != image.symbol_end();++symbol)      
-    {        
-    	printf("get a qrcode: type %s ,data: %s \n",symbol->get_type_name().c_str(),\
-			symbol->get_data().c_str()); 
-    } 
-	return true;
+    int fd;
+    size_t size;
+    char QRdata[1024] = {0};
+    char dev_config_data[1024] = {0};
+
+    /* remove the header: "INITCAM:" */
+    config_buffer += 8;
+
+    memset(QRdata, 0, 1024);
+    memcpy(QRdata, config_buffer, strlen(config_buffer));
+
+    /* analysis the config information from QR code. */
+    char*temp = strtok(QRdata,";");
+    while(temp)
+    {
+        char Key = (char)*temp;
+        char *Value = temp+2;
+        switch(Key)
+        {
+            case 'A': /* MQTT server ip address */
+                memset(mqtt_server_ip,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(mqtt_server_ip,"%s",Value);
+	        break;
+            case 'B': /* MQTT server port */
+                mqtt_server_port =atoi(Value);
+                break;
+            case 'C': /* MQTT Client ID as login username */
+                memset(mqtt_user,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(mqtt_user,"%s",Value);
+                break;
+            case 'D': /* MQTT client login password */
+                memset(mqtt_passwd,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(mqtt_passwd,"%s",Value);
+                break;
+            case 'E': /* FTP server IP address */
+                memset(ftp_serverip,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(ftp_serverip,"%s",Value);
+                break;
+            case 'F': /* FTP server port */
+                ftp_server_port =atoi(Value);
+                break;
+            case 'G': /* FTP login username */
+                memset(ftp_user,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(ftp_user,"%s",Value);
+                break;
+            case 'H': /* FTP login password */
+                memset(ftp_passwd,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(ftp_passwd,"%s",Value);
+                break;
+            case 'I': /* camera IP address */
+                memset(camera_ip_addr,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(camera_ip_addr,"%s",Value);
+                break;
+            case 'J': /* camera IP Network Mask */
+                memset(camera_ip_mask,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(camera_ip_mask,"%s",Value);
+                break;
+            case 'K': /* camera IP Gateway */
+                memset(camera_ip_gateway,0,MAX_PARAM_SIZE);
+                if(param_check(Value))
+                {
+                     printf("error str len > maxsize \n",MAX_PARAM_SIZE);
+                     return -1;
+                }
+                sprintf(camera_ip_gateway,"%s",Value);
+                break;
+            default:
+                printf("ERROR: this key %s doesn't be supported now.\n", temp);
+                return -1;
+        }
+
+        temp = strtok(NULL, ";");
+    }
+
+    /* open the orignal config file, If not exist, create it. */
+    fd = open("dev_config", O_RDWR|O_CREAT);
+    if (fd < 0)
+    {
+        perror("file open config file!\n ");
+        return -1;
+    }
+
+    /* Flush the orignal config file, new data will update it. */
+    ftruncate(fd,0);
+    lseek(fd,0,SEEK_SET);
+
+    memset(dev_config_data, 0, 1024);
+    /* assemble init information into dev_config file */
+    sprintf(dev_config_data, "%d,%d,%d,%s,%s,%s,%d,%s,%s,%s,%d,%s,%s,%s,%s,%d,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%d,%d",
+	     camroute,camflip,test_flag,mqtt_uptopic,mqtt_downtopic,ftp_serverip,ftp_server_port,ftp_user,ftp_passwd,
+             mqtt_server_ip,mqtt_server_port,mqtt_user,mqtt_passwd,
+             ota_mqtt_downtopic,ota_mqtt_server_ip,ota_mqtt_server_port,ota_mqtt_user,ota_mqtt_passwd,
+             ota_ftp_serverip,ota_ftp_server_port,ota_ftp_user,ota_ftp_passwd,
+             camera_ip_addr,camera_ip_mask,camera_ip_gateway,
+             g_device_sn,sw_ver,hw_ver);
+
+    /* write into dev_config file */
+    size = write(fd, dev_config_data, strlen(dev_config_data));
+    if(size != strlen(dev_config_data))
+    {
+        printf("save_InitVonfig: write file faild.\n");
+	close(fd);
+	return -1;
+    }
+
+    close(fd);
+    return 0;
 }
 
+bool scan_image(cv::Mat &img_in)
+{
+	int ret;
+	zbar::ImageScanner scanner;
+	scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);
+	int width = img_in.cols;
+	int height = img_in.rows;
+	uchar *raw = (uchar *)img_in.data;
+	zbar::Image image(width, height, "Y800", raw, width * height);
+	int n = scanner.scan(image);
+	zbar::Image::SymbolIterator symbol = image.symbol_begin();
+	if(image.symbol_begin()==image.symbol_end())
+	{
+		return false;
+	}
+	for(;symbol != image.symbol_end();++symbol)
+	{
+		printf("get a qrcode: type %s ,data: %s \n",symbol->get_type_name().c_str(),\
+		symbol->get_data().c_str());
 
+		/* To save the QR code information into the configure file */
+		ret = save_DevConfig(symbol->get_data().c_str());
+		if(ret)
+			return false;
+	}
+	return true;
+}

@@ -110,6 +110,10 @@ enum param_index{
 	PARAM_INDEX_OTA_FTP_USERNAME,
 	PARAM_INDEX_OTA_FTP_PASSWD,
 	
+	PARAM_INDEX_CAMERA_IP_ADDR,
+	PARAM_INDEX_CAMERA_IP_MASK,
+	PARAM_INDEX_CAMERA_IP_GATEWAY,
+
 	PARAM_INDEX_G_DEVICE_SN,
 	PARAM_INDEX_SW_VER,
 	PARAM_INDEX_HW_VER
@@ -143,6 +147,11 @@ char ota_ftp_serverip[MAX_PARAM_SIZE];
 int ota_ftp_server_port;
 char ota_ftp_user[MAX_PARAM_SIZE];
 char ota_ftp_passwd[MAX_PARAM_SIZE];
+
+char camera_ip_addr[MAX_PARAM_SIZE];
+char camera_ip_mask[MAX_PARAM_SIZE];
+char camera_ip_gateway[MAX_PARAM_SIZE];
+
 char g_device_sn[MAX_PARAM_SIZE];
 
 uint8_t sw_ver = 0x1;
