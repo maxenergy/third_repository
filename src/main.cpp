@@ -1281,6 +1281,7 @@ void register_sig()
 int save_DevConfig(const char *config_buffer)
 {
     int fd;
+    int camroute_tmp = 0;
     size_t size;
     char QRdata[1024] = {0};
     char dev_config_data[1024] = {0};
@@ -1308,7 +1309,7 @@ int save_DevConfig(const char *config_buffer)
         temp = strtok(NULL, ";");
 
         /* If Security_level is 1, only IP address could be set. */
-        if (!(((security_level == 1)&&((Key=='I')||(Key=='J')||(Key=='K')))||(security_level==2)))
+        if (!(((security_level == 1)&&((Key=='I')||(Key=='J')||(Key=='K')||(Key=='L')))||(security_level==2)))
         {
             printf("Tips: Current Security Level is %d, can't set Key %c\n", security_level, Key);
             continue;
@@ -1403,6 +1404,16 @@ int save_DevConfig(const char *config_buffer)
                 }
                 sprintf(camera_ip_gateway,"%s",Value);
                 break;
+            case 'L': /* camera route */
+		camroute_tmp = atoi(Value);
+                if ((camroute==0)||(camroute=180))
+                {
+                    camroute = camroute_tmp;
+                    break;
+                }else{
+                    printf("error camera route value:%d \n",camroute);
+                    return -1;
+                }
             default:
                 printf("ERROR: this key %s doesn't be supported now.\n", temp);
                 return -1;
@@ -1441,6 +1452,8 @@ int save_DevConfig(const char *config_buffer)
     }
 
     close(fd);
+
+    system("reboot");
     return 0;
 }
 
