@@ -1,6 +1,11 @@
+#include <iostream>
+#include <string>
+using namespace std;
+
 #include "main.h"
 #include "sample_comm.h"
 #include "mpi_awb.h"
+#include "minIni.h"
 extern "C" {
 extern int sysinit(int *fd_out,int mroute,int mflip);
 extern void log_level_set(int level);
@@ -132,9 +137,9 @@ int main()
 	sw_ver = -1;
 	hw_ver = -1;
 	printf("ota sw_ver %d ota hw_ver %d \n",ota_sw_ver,ota_hw_ver);
+	setup_env();
 	eth0_ifconfig();
 	vendor_checkota();
-	setup_env();
 	
 	get_version(&sw_ver,&hw_ver);
 	
@@ -168,19 +173,20 @@ int main()
 	sprintf(save_swver_buf,"echo %d > sw_version",sw_ver);
 	sprintf(save_hwver_buf,"echo %d > hw_version",hw_ver);
 
-    system(save_swver_buf);
+	system(save_swver_buf);
 	system(save_hwver_buf);
 
+	setup_env();
+	eth0_ifconfig();
+
 	wdt_loop = std::thread(&thread_wdt_loop);
-    wdt_loop.detach();
+	wdt_loop.detach();
 	checkota();
 	ota_stoped = 1;
 	
-	setup_env();
-	eth0_ifconfig();
 	set_time();
 
-    tcp_cmd = new Tcp_Cmd(TCP_CMD_PORT,update_face,tcp_ota_func);
+	tcp_cmd = new Tcp_Cmd(TCP_CMD_PORT,update_face,tcp_ota_func);
 	int fd_sys;
 	std::cout << "pola sdk init!!! " << std::endl;
 	SAMPLE_VENC_CALLBACK_S callBack;
@@ -191,7 +197,7 @@ int main()
 	init_pola_sdk(0,0.4,test_flag);
 #endif
 	prs485 = new rs485_port(0,9600);
-    clean_flag = 0;
+	clean_flag = 0;
 
 	Aiot_server = new cloud_server(mqtt_uptopic,mqtt_downtopic,ota_mqtt_downtopic,sw_ver,hw_ver);	
 	Aiot_server->set_cmd_cb([&](down_event event){
@@ -203,14 +209,14 @@ int main()
 	aiot_setup_once = std::thread(&thread_aiot_setup);
 	aiot_setup_once.detach();
 
-    ir_cut_thread = std::thread(&thread_ircut);
+	ir_cut_thread = std::thread(&thread_ircut);
 	ir_cut_thread.detach();
 	
 	FaceRecognitionApi &framework = FaceRecognitionApi::getInstance();
-	 if (!framework.init()) {
-		 printf("framework init failed \n");
-		 return 1;
-	 };
+	if (!framework.init()) {
+		printf("framework init failed \n");
+		return 1;
+	};
 #if 1
 	framework.startCameraPreview();
 	framework.setCameraPreviewCallBack([&](FaceDetect::Msg bob){
@@ -854,7 +860,7 @@ void thread_wdt_loop()
 		}
 	}
 }
-int param_check(char* str)
+int param_check(const char* str)
 {
 	if(sizeof(str) > MAX_PARAM_SIZE)
 		return -1;
@@ -886,269 +892,279 @@ void eth0_ifconfig()
 
 void setup_env()
 {
-	int index = 0;
+	int index = 0, i;
 	struct ifreq ifreq;
-    int sock;
+	int sock;
 	uint8_t hw_addr[6];
+
 	printf("setup env!------------\n");
-    if ((sock = socket (AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("setup env failed! socket err!\n");
-        return;
-    }
-    strcpy (ifreq.ifr_name, "eth0");    //Currently, only get eth0
-    if (ioctl (sock, SIOCGIFHWADDR, &ifreq) < 0)
-    {
-        printf("setup env failed! eth0 device err!\n");
-        return;
-    }
-    for(int i=0;i<6;i++)
-    {
+
+	if ((sock = socket (AF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		printf("setup env failed! socket err!\n");
+		return;
+	}
+	strcpy (ifreq.ifr_name, "eth0");    //Currently, only get eth0
+	if (ioctl (sock, SIOCGIFHWADDR, &ifreq) < 0)
+	{
+		printf("setup env failed! eth0 device err!\n");
+		return;
+	}
+	for(i=0;i<6;i++)
+	{
 		hw_addr[i] = ifreq.ifr_hwaddr.sa_data[i];
 	}
 	memset(fixed_dev_sn,0,20);
-    sprintf(fixed_dev_sn,"%s_%x%x%x%x%x%x_%d",CUSTOM_ID,hw_addr[0],hw_addr[1], \
+	sprintf(fixed_dev_sn,"%s_%x%x%x%x%x%x_%d",CUSTOM_ID,hw_addr[0],hw_addr[1], \
 		hw_addr[2],hw_addr[3],hw_addr[4],hw_addr[5],DEV_TYPE);
 
 	printf("fixed_dev_sn %s \n",fixed_dev_sn);
 	//close(sock);
-	
-	if(access("dev_config", F_OK) == 0)
+
+	if(access("InitConfig.ini", F_OK) == 0)
 	{
-		int fd;
-		char data[1024] = {0};
-		int i;
-
-		fd = open("dev_config", O_RDONLY);
-		if (fd < 0)
-		{
-			perror("file open config file!\n ");    
-			return;
-		}
-
-		read(fd, data, 1024);
-
+		string temp;
+		minIni ini("InitConfig.ini");
 		
-		char*temp = strtok(data,",");
-		while(temp)
+		for(i=0;i<PARAM_INDEX_HW_VER;i++)
 		{
-			switch(index)
+			switch(i)
 			{
 				case PARAM_INDEX_CAM_ROUTE:
-					 camroute =atoi(temp);
+					 camroute = ini.geti("CAMERA","camera_route",0);
 					 printf("camroute is %d \n",camroute);
 					 break;
 
 				case PARAM_INDEX_CAM_FLIP:
-					camflip =atoi(temp);
+					camflip = ini.geti("CAMERA","camera_flip",0);
 					printf("camflip is %d \n",camflip);
 					break;
 					
 				case PARAM_INDEX_TESTFLAG:
-					test_flag =atoi(temp);
+					test_flag = ini.geti("CAMERA","camera_test_flag",0);
 					printf("test_flag is %d \n",test_flag);
 					break;
 					
 				case PARAM_INDEX_MQTT_UPTOPIC:
 					memset(mqtt_uptopic,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("MQTT","mqtt_uptopic","UP/CAM/ZQ");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(mqtt_uptopic,"%s",temp);
+					sprintf(mqtt_uptopic,"%s",temp.c_str());
 					printf("mqtt_uptopic is %s \n",mqtt_uptopic);
 					break;
 				case PARAM_INDEX_MQTT_DOWNTOPIC:
 					memset(mqtt_downtopic,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("MQTT","mqtt_downtopic","CTL/CAM/ZQ");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(mqtt_downtopic,"%s",temp);
+					sprintf(mqtt_downtopic,"%s",temp.c_str());
 					printf("mqtt_downtopic is %s \n",mqtt_downtopic);
 					break;
 				case PARAM_INDEX_FTP_SERVER_IP:
 					memset(ftp_serverip,0,MAX_PARAM_SIZE);
-				    if(param_check(temp)){
+					temp = ini.gets("FTP","ftp_server_ip","222.191.244.203");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}	
-					sprintf(ftp_serverip,"%s",temp);
+					sprintf(ftp_serverip,"%s",temp.c_str());
 					printf("ftp_serverip is %s \n",ftp_serverip);
 					break;
 				case PARAM_INDEX_FTP_SERVER_PORT:
-					ftp_server_port =atoi(temp);
+					ftp_server_port = ini.geti("FTP","ftp_server_port",2125);
 					printf("ftp_server_port is %d \n",ftp_server_port);
 					break;
 				case PARAM_INDEX_FTP_USERNAME:
 					memset(ftp_user,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("FTP","ftp_user","ftpuser");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ftp_user,"%s",temp);
+					sprintf(ftp_user,"%s",temp.c_str());
 					printf("ftp_user is %s \n",ftp_user);
 					break;
 				case PARAM_INDEX_FTP_PASSWD:
 					memset(ftp_passwd,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("FTP","ftp_passwd","welcome1");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ftp_passwd,"%s",temp);
+					sprintf(ftp_passwd,"%s",temp.c_str());
 					printf("ftp_passwd is %s \n",ftp_passwd);
 					break;
 					
 				case PARAM_INDEX_MQTT_SERVER_IP:
 					memset(mqtt_server_ip,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("MQTT","mqtt_server_ip","222.191.244.203");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(mqtt_server_ip,"%s",temp);
+					sprintf(mqtt_server_ip,"%s",temp.c_str());
 					printf("mqtt_server_ip is %s \n",mqtt_server_ip);
 					break;
 					
 				case PARAM_INDEX_MQTT_SERVER_PORT:
-					mqtt_server_port = atoi(temp);
+					mqtt_server_port = ini.geti("MQTT","mqtt_server_port",2884);
 					printf("mqtt_server_port is %d \n",mqtt_server_port);
 					break;
 					
 				case PARAM_INDEX_MQTT_USERNAME:
 					memset(mqtt_user,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("MQTT","mqtt_user","test");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(mqtt_user,"%s",temp);
+					sprintf(mqtt_user,"%s",temp.c_str());
 					printf("mqtt_user is %s \n",mqtt_user);
 					break;
+
 				case PARAM_INDEX_MQTT_PASSWD:
 					memset(mqtt_passwd,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("MQTT","mqtt_passwd","123456");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(mqtt_passwd,"%s",temp);
+					sprintf(mqtt_passwd,"%s",temp.c_str());
 					printf("mqtt_passwd is %s \n",mqtt_passwd);
 					break;
 					
 				case PARAM_INDEX_OTA_MQTT_DOWNTOPIC:
 					memset(ota_mqtt_downtopic,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OTA","ota_mqtt_downtopic","DOWN/CAM/OTA");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_mqtt_downtopic,"%s",temp);
+					sprintf(ota_mqtt_downtopic,"%s",temp.c_str());
 					printf("ota_mqtt_downtopic is %s \n",ota_mqtt_downtopic);
 					break;
 					
 				case PARAM_INDEX_OTA_MQTT_SERVER_IP:
 					memset(ota_mqtt_server_ip,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OTA","ota_mqtt_server_ip","47.104.16.46");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_mqtt_server_ip,"%s",temp);
+					sprintf(ota_mqtt_server_ip,"%s",temp.c_str());
 					printf("ota_mqtt_server_ip is %s \n",ota_mqtt_server_ip);
 					break;
 				case PARAM_INDEX_OTA_MQTT_SERVER_PORT:
-					ota_mqtt_server_port = atoi(temp);
+					ota_mqtt_server_port = ini.geti("OTA","ota_mqtt_server_port",61613);
 					printf("ota_mqtt_server_port is %d \n",ota_mqtt_server_port);
 					break;
 					
 				case PARAM_INDEX_OTA_MQTT_USERNAME:
 					memset(ota_mqtt_user,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OTA","ota_mqtt_user","admin");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_mqtt_user,"%s",temp);
+					sprintf(ota_mqtt_user,"%s",temp.c_str());
 					printf("ota_mqtt_user is %s \n",ota_mqtt_user);
 					break;
 
 				case PARAM_INDEX_OTA_MQTT_PASSWD:
 					memset(ota_mqtt_passwd,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OTA","ota_mqtt_passwd","password");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_mqtt_passwd,"%s",temp);
+					sprintf(ota_mqtt_passwd,"%s",temp.c_str());
 					printf("ota_mqtt_passwd is %s \n",ota_mqtt_passwd);
 					break;
 					
 				case PARAM_INDEX_OTA_FTP_SERVER_IP:
 					memset(ota_ftp_serverip,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OTA","ota_ftp_server_ip","47.104.16.46");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_ftp_serverip,"%s",temp);
+					sprintf(ota_ftp_serverip,"%s",temp.c_str());
 					printf("ota_ftp_serverip is %s \n",ota_ftp_serverip);
 					break;
 				
 				case PARAM_INDEX_OTA_FTP_SERVER_PORT:
-					ota_ftp_server_port = atoi(temp);
+					ota_ftp_server_port = ini.geti("OTA","ota_ftp_server_port",21);
 					printf("ota_ftp_server_port is %d \n",ota_ftp_server_port);
 					break;
 
 				case PARAM_INDEX_OTA_FTP_USERNAME:
 					memset(ota_ftp_user,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OAT","ota_ftp_user","ftpuser1");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_ftp_user,"%s",temp);
+					sprintf(ota_ftp_user,"%s",temp.c_str());
 					printf("ota_ftp_user is %s \n",ota_ftp_user);
 					break;
 				
 				case PARAM_INDEX_OTA_FTP_PASSWD:
 					memset(ota_ftp_passwd,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("OTA","ota_ftp_passwd","Wmanhai123!");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(ota_ftp_passwd,"%s",temp);
+					sprintf(ota_ftp_passwd,"%s",temp.c_str());
 					printf("ota_ftp_passwd is %s \n",ota_ftp_passwd);
 					break;
 				
 				case PARAM_INDEX_CAMERA_IP_ADDR:
 					memset(camera_ip_addr,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("CAMERA","camera_ip_addr","192.168.1.88");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(camera_ip_addr,"%s",temp);
+					sprintf(camera_ip_addr,"%s",temp.c_str());
 					printf("camera_ip_addr is %s \n",camera_ip_addr);
 					break;
 
 				case PARAM_INDEX_CAMERA_IP_MASK:
 					memset(camera_ip_mask,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("CAMERA","camera_ip_mask","255.255.255.0");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(camera_ip_mask,"%s",temp);
+					sprintf(camera_ip_mask,"%s",temp.c_str());
 					printf("camera_ip_mask is %s \n",camera_ip_mask);
 					break;
 
 				case PARAM_INDEX_CAMERA_IP_GATEWAY:
 					memset(camera_ip_gateway,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("CAMERA","camera_ip_gateway","192.168.1.1");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(camera_ip_gateway,"%s",temp);
+					sprintf(camera_ip_gateway,"%s",temp.c_str());
 					printf("camera_ip_gateway is %s \n",camera_ip_gateway);
 					break;
 
 				case PARAM_INDEX_G_DEVICE_SN:
 					memset(g_device_sn,0,MAX_PARAM_SIZE);
-					if(param_check(temp)){
+					temp = ini.gets("DEVICE","device_sn","EMSD00010001");
+					if(param_check(temp.c_str())){
 						printf("error str len > maxsize \n",MAX_PARAM_SIZE);
 						break;
 					}
-					sprintf(g_device_sn,"%s",temp);
+					sprintf(g_device_sn,"%s",temp.c_str());
 					printf("g_device_sn is %s \n",g_device_sn);
 					break;
 
@@ -1163,15 +1179,12 @@ void setup_env()
 					printf("hw_ver is %x \n",hw_ver);
 			   	    break;
 #endif
-			   default:
-			   		printf("error param! \n");
-			   		break;
+				default:
+					printf("error param! \n");
+					break;
 			}
-			index++;
-			temp = strtok(NULL,",");
 		}
 
-		close(fd);
 	}
 }
 void checkota()
@@ -1281,10 +1294,13 @@ void register_sig()
 int save_DevConfig(const char *config_buffer)
 {
     int fd;
-    int camroute_tmp = 0;
+    int tmp_value = 0;
     size_t size;
     char QRdata[1024] = {0};
     char dev_config_data[1024] = {0};
+    bool is_success;
+
+    minIni ini("InitConfig.ini");
 
     /* judgement the security level */
     if (!security_level)
@@ -1308,11 +1324,11 @@ int save_DevConfig(const char *config_buffer)
 
         temp = strtok(NULL, ";");
 
-        /* If Security_level is 1, only IP address could be set. */
-        if (!(((security_level == 1)&&((Key=='I')||(Key=='J')||(Key=='K')||(Key=='L')))||(security_level==2)))
+        /* If Security_level is 1, only IP address and Camera Route could be set. */
+        if ((security_level == 1)&&((Key!='I')||(Key!='J')||(Key!='K')||(Key=='L')))
         {
             printf("Tips: Current Security Level is %d, can't set Key %c\n", security_level, Key);
-            continue;
+            return -1;
         }
 
         switch(Key)
@@ -1325,9 +1341,31 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(mqtt_server_ip,"%s",Value);
+
+                is_success = ini.put("MQTT","mqtt_server_ip",mqtt_server_ip);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put MQTT mqtt_server_ip failed.\n ");
+                    return -1;
+                }
+
 	        break;
             case 'B': /* MQTT server port */
-                mqtt_server_port =atoi(Value);
+                tmp_value =atoi(Value);
+                if ((tmp_value<1)||(tmp_value>65535))
+                {
+                    printf("error: ftp port is invalid as %d.\n", tmp_value);
+                    return -1;
+                }
+                mqtt_server_port = tmp_value;
+
+                is_success = ini.put("MQTT","mqtt_server_port",mqtt_server_port);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put MQTT mqtt_server_port failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'C': /* MQTT Client ID as login username */
                 memset(mqtt_user,0,MAX_PARAM_SIZE);
@@ -1337,6 +1375,14 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(mqtt_user,"%s",Value);
+
+                is_success = ini.put("MQTT","mqtt_user",mqtt_user);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put MQTT mqtt_user failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'D': /* MQTT client login password */
                 memset(mqtt_passwd,0,MAX_PARAM_SIZE);
@@ -1346,6 +1392,14 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(mqtt_passwd,"%s",Value);
+
+                is_success = ini.put("MQTT","mqtt_passwd",mqtt_passwd);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put MQTT mqtt_passwd failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'E': /* FTP server IP address */
                 memset(ftp_serverip,0,MAX_PARAM_SIZE);
@@ -1355,9 +1409,31 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(ftp_serverip,"%s",Value);
+
+                is_success = ini.put("FTP","ftp_server_ip",ftp_serverip);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put FTP ftp_server_ip failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'F': /* FTP server port */
-                ftp_server_port =atoi(Value);
+                tmp_value =atoi(Value);
+                if ((tmp_value<1)||(tmp_value>65535))
+                {
+                    printf("error: ftp port is invalid as %d.\n", tmp_value);
+                    return -1;
+                }
+                ftp_server_port = tmp_value;
+
+                is_success = ini.put("FTP","ftp_server_port",ftp_server_port);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put FTP ftp_server_port failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'G': /* FTP login username */
                 memset(ftp_user,0,MAX_PARAM_SIZE);
@@ -1367,6 +1443,14 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(ftp_user,"%s",Value);
+
+                is_success = ini.put("FTP","ftp_user",ftp_user);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put FTP ftp_user failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'H': /* FTP login password */
                 memset(ftp_passwd,0,MAX_PARAM_SIZE);
@@ -1376,6 +1460,14 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(ftp_passwd,"%s",Value);
+
+                is_success = ini.put("FTP","ftp_passwd",ftp_passwd);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put FTP ftp_passwd failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'I': /* camera IP address */
                 memset(camera_ip_addr,0,MAX_PARAM_SIZE);
@@ -1385,6 +1477,14 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(camera_ip_addr,"%s",Value);
+
+                is_success = ini.put("CAMERA","camera_ip_addr",camera_ip_addr);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put CAMERA camera_ip_addr failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'J': /* camera IP Network Mask */
                 memset(camera_ip_mask,0,MAX_PARAM_SIZE);
@@ -1394,6 +1494,14 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(camera_ip_mask,"%s",Value);
+
+                is_success = ini.put("CAMERA","camera_ip_mask",camera_ip_mask);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put CAMERA camera_ip_mask failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'K': /* camera IP Gateway */
                 memset(camera_ip_gateway,0,MAX_PARAM_SIZE);
@@ -1403,55 +1511,58 @@ int save_DevConfig(const char *config_buffer)
                      return -1;
                 }
                 sprintf(camera_ip_gateway,"%s",Value);
+
+                is_success = ini.put("CAMERA","camera_ip_gateway",camera_ip_gateway);
+                if(!is_success)
+                {
+                    printf("ERROR: ini.put CAMERA camera_ip_gateway failed.\n ");
+                    return -1;
+                }
+
                 break;
             case 'L': /* camera route */
-		camroute_tmp = atoi(Value);
-                if ((camroute==0)||(camroute=180))
+		tmp_value = atoi(Value);
+                if ((tmp_value==0)||(tmp_value==180))
                 {
-                    camroute = camroute_tmp;
+                    camroute = tmp_value;
+
+                    is_success = ini.put("CAMERA","camera_route",camroute);
+                    if(!is_success)
+                    {
+                        printf("ERROR: ini.put CAMERA camera_route failed.\n ");
+                        return -1;
+                    }
+
                     break;
                 }else{
                     printf("error camera route value:%d \n",camroute);
                     return -1;
                 }
+
+            case 'M': /* camera flip */
+		tmp_value = atoi(Value);
+                if ((tmp_value==0)||(tmp_value==1))
+                {
+                    camflip = tmp_value;
+
+                    is_success = ini.put("CAMERA","camera_flip",camflip);
+                    if(!is_success)
+                    {
+                        printf("ERROR: ini.put CAMERA camera_flip failed.\n ");
+                        return -1;
+                    }
+
+                    break;
+                }else{
+                    printf("error camera flip value:%d \n",camflip);
+                    return -1;
+                }
+
             default:
                 printf("ERROR: this key %s doesn't be supported now.\n", temp);
                 return -1;
         }
     }
-
-    /* open the orignal config file, If not exist, create it. */
-    fd = open("dev_config", O_RDWR|O_CREAT);
-    if (fd < 0)
-    {
-        perror("file open config file!\n ");
-        return -1;
-    }
-
-    /* Flush the orignal config file, new data will update it. */
-    ftruncate(fd,0);
-    lseek(fd,0,SEEK_SET);
-
-    memset(dev_config_data, 0, 1024);
-    /* assemble init information into dev_config file */
-    sprintf(dev_config_data, "%d,%d,%d,%s,%s,%s,%d,%s,%s,%s,%d,%s,%s,%s,%s,%d,%s,%s,%s,%d,%s,%s,%s,%s,%s,%s,%d,%d",
-	     camroute,camflip,test_flag,mqtt_uptopic,mqtt_downtopic,ftp_serverip,ftp_server_port,ftp_user,ftp_passwd,
-             mqtt_server_ip,mqtt_server_port,mqtt_user,mqtt_passwd,
-             ota_mqtt_downtopic,ota_mqtt_server_ip,ota_mqtt_server_port,ota_mqtt_user,ota_mqtt_passwd,
-             ota_ftp_serverip,ota_ftp_server_port,ota_ftp_user,ota_ftp_passwd,
-             camera_ip_addr,camera_ip_mask,camera_ip_gateway,
-             g_device_sn,sw_ver,hw_ver);
-
-    /* write into dev_config file */
-    size = write(fd, dev_config_data, strlen(dev_config_data));
-    if(size != strlen(dev_config_data))
-    {
-        printf("save_InitVonfig: write file faild.\n");
-	close(fd);
-	return -1;
-    }
-
-    close(fd);
 
     system("reboot");
     return 0;
