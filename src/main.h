@@ -39,7 +39,6 @@
 #include "zbar.h" 
 #include <vector>
 
-
 //#define BUILD_SYSTEM_DEMO
 
 #define WDT_DEV_FILE "/dev/watchdog"
@@ -82,6 +81,12 @@ typedef struct __AI_Data{
 	unsigned int timestamp;
 }AI_Data;
 
+
+enum SECURITY_LEVEL{
+	NOT_ALLOW_QRCODE=0,
+	ONLF_IP_AND_CAM,
+	FOR_ALL_CONFIG,
+};
 
 enum param_index{
 	PARAM_INDEX_CAM_ROUTE = 0,
@@ -154,8 +159,9 @@ char camera_ip_gateway[MAX_PARAM_SIZE];
 
 char g_device_sn[MAX_PARAM_SIZE];
 
-uint8_t sw_ver = 0x1;
-uint8_t hw_ver = 0x1;
+uint8_t sw_ver = 0x7;
+
+uint8_t hw_ver = 0x2;
 
 std::mutex data_mutex;
 FaceRecognitionApi *framework;
@@ -186,7 +192,7 @@ int wdt_alive_flag = 0;
 int camroute = 0;
 int camflip = 0;
 int test_flag;
-int ota_stoped =0;
+int system_init_stoped =0;
 rs485_port *prs485;
 
 std::mutex mFifo_Mutex;
@@ -207,6 +213,8 @@ std::thread log_manager_loop;
 std::thread ota_setup_once;
 
 std::thread qrcode_loop;
+
+int security_level = FOR_ALL_CONFIG;
 
 void thread_ota_setup();
 
@@ -229,4 +237,6 @@ void vendor_checkota();
 void thread_log_manager();
 void process_xdetectet(FaceDetect::Msg bob);
 bool scan_image(cv::Mat &img_in);
+void gpio_write(int gpio,int on_off);
+
 

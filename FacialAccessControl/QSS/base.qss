@@ -1,0 +1,258 @@
+QFrame#mTitleFrame{
+	border:0px;
+	background-color: rgb(17, 139, 255);
+}
+
+QPushButton#mBackBtn{
+	border-image: url(:/img/back.png);
+}
+
+QLabel#mTitle{
+	width:200px ;
+	font-size: 36px;
+	color:white ;
+}
+
+QPushButton#mRebootBtn{
+	border-image: url(:/img/reboot.png);
+}
+
+QFrame#mBottomFrame{
+	border:0px ;
+        background-color: rgb(233, 233, 233);
+}
+
+QPushButton#mCapBtn{
+	
+	border-image: url(:/img/cap_blue.png);
+}
+
+QPushButton#mInfoBtn{
+	
+	border-image: url(:/img/Info.png);
+}
+
+QPushButton#mInputBtn{
+	
+	border-image: url(:/img/Input.png);
+}
+
+
+QLabel#mPicLab{
+	color:white ;
+	font-size:36px;
+	background-color: rgb(198, 198, 198);
+}
+
+QPushButton#mDeviceSettingsBtn{
+	border-image: url(:/img/device.png);
+}
+
+QPushButton#mDBUpdateBtn{
+	border-image: url(:/img/db.png);
+}
+QPushButton#mFaceInputBtn{
+	border-image: url(:/img/Input.png);
+}
+
+QLabel#mVideoLab{
+	color:white ;
+	font-size:36px;
+	background-color: rgb(198, 198, 198);
+}
+
+
+QFrame#mSettingFrame{
+	background-color:white ;
+	border:1px solid rgb(211, 215, 207);
+	border-radius:3px ;
+}
+
+QPushButton#mSaveBtn{
+	border-image: url(:/img/save.png);
+}
+
+QLabel#mModeSelectionLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
+QCheckBox#mKaoQinCheck{
+	spacing: 20px;
+	font-size:30px ;
+}
+
+
+QCheckBox#mKaoQinCheck::indicator{
+    width: 30px;
+    height: 30px;
+}
+
+QCheckBox#mKaoQinCheck::indicator:unchecked{
+    image:url(:/img/unchoose.png);
+}
+
+QCheckBox#mKaoQinCheck::indicator:checked{
+    image:url(:/img/choose.png);
+}
+
+QTextEdit#mDeviceDescribeEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:30px ;
+}
+
+
+
+
+QFrame#mInfoFrame{
+	background-color:white ;
+	border:1px solid rgb(211, 215, 207);
+	border-radius:3px ;
+}
+
+QLineEdit#mNameEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:25px ;
+}
+QLineEdit#mUserIDEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:25px ;
+}
+
+
+QLabel#mLitleLab{
+	background-color:rgb(40, 147, 255) ;
+}
+
+QTableWidget{
+	background-color:white ;
+	gridline-color: rgb(239, 239, 239);
+	color:rgb(0,0,0);
+	font-size:25px ;
+	border:1px solid rgb(239, 239, 239);
+}
+QTableWidget::item:selected{
+        background:rgba(255,255,255,1);    
+} 
+
+QHeaderView::section{
+	background-color:white;
+	font:25px '宋体';
+	color: rgb(0,0,0);
+	border:1px solid rgb(239, 239, 239);
+}
+
+QTableCornerButton::section {
+    color:rgb(0,0,0);/*文字颜色*/
+    background-color: white;/*背景色*/
+    font: 25px;/*字体大小*/
+	border:1px solid rgb(239, 239, 239);  
+	border-top:0px ;
+	border-left:0px ;
+}
+
+QHeaderView::section:first
+{
+	
+	border-left:0px ;
+	border-top:0px ;
+}
+QHeaderView::section:last
+{
+	border-top:0px ;
+	border-left:0px ;
+}
+QHeaderView::section:middle
+{
+	border-top:0px ;
+	border-left:0px ;
+}
+
+
+
+QCheckBox#limtBox{
+	spacing: 10px;
+	font-size:24px ;
+}
+
+
+QCheckBox#limtBox::indicator{
+    width: 24px;
+    height: 24px;
+}
+
+QCheckBox#limtBox::indicator:unchecked{
+    image:url(:/img/unchoose.png);
+}
+
+QCheckBox#limtBox::indicator:checked{
+    image:url(:/img/choose.png);
+}
+QPushButton#mFaceBtn{
+	border:none ;
+	background-color: rgba(136, 138, 133, 0.3);
+	border-radius:7px ;
+	width:140px ;
+	height:160px ;
+	font-size:25px ;
+}
+
+QFrame#mFaceInputFrame{
+	border:1px solid rgb(40, 147, 255) ;
+	border-radius:10px ;
+	background-color:white;
+}
+
+QPushButton#info_cap_btn{
+	width:60px ;
+	height:60px ;
+	border:none ;
+	border-radius:30px ;
+	color:white ;
+	background-color: rgb(215, 52, 52);
+	
+}
+QPushButton#info_back_btn{
+	width:60px ;
+	height:60px ;
+	border:none ;
+	border-radius:30px ;
+	color:white ;
+	background-color: rgba(198, 198, 198, 0);
+	font-size:25px ;
+}
+
+
+
+
+
+QLabel#lab_camera{
+	width:640px;
+	height:480px ;
+	background-color: rgb(136, 138, 133);
+}
+
+QPushButton#btn_test:pressed {
+    background-color:#3dce3d;
+    color:white;
+    border:2px solid rgb(211, 215, 207);
+    border-color:white ;
+}
+
+QProgressBar{
+	border:none ;
+	border-radius:8px ;
+	text-align:center;
+    width:760px;
+	height:16px ;
+}
+
+QProgressBar::chunk{
+	border:none ;
+	background-color: rgb(40, 147, 255);
+	border-radius:8px ;
+}
+

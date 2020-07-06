@@ -16,6 +16,9 @@ extern  HI_VOID SAMPLE_COMM_VENC_RegCallback(VENC_CHN vencChn, SAMPLE_VENC_CALLB
 #define GPIO_IR_LED_IN      2
 #define GPIO_MIR_S0 		4
 #define GPIO_MIR_S1 		5
+#define GPIO_EB_ALARM       84
+
+#define DELAY_TIME_FOR_COUNT  3
 
 //#define DEBUG_FILE
 
@@ -182,7 +185,6 @@ int main()
 	wdt_loop = std::thread(&thread_wdt_loop);
 	wdt_loop.detach();
 	checkota();
-	ota_stoped = 1;
 	
 	set_time();
 
@@ -230,7 +232,12 @@ int main()
 #endif
 	qrcode_loop = std::thread(&thread_qrcode_setup);
 	qrcode_loop.detach();
-	
+
+	log_manager_loop = std::thread(&thread_log_manager);
+	log_manager_loop.detach();
+
+	system_init_stoped = 1;
+
  //   Logger::setLogLevel(Logger::LogWarning);
     EventScheduler* scheduler = EventScheduler::createNew(EventScheduler::POLLER_SELECT);
  
@@ -298,6 +305,32 @@ void save_box(MtcnnInterface::Out list)
 	data_mutex.unlock();
 }
 
+void eb_alarm(int status)
+{
+	gpio_write(GPIO_EB_ALARM,status);
+}
+
+void eliminate_dithering(int status)
+{
+	static int last_status =0;
+	static int x_count = 0;
+	if(last_status == status){
+		x_count++;
+	}else {
+		x_count = 0;
+		printf("filter dithering!\n");
+	}
+	last_status = status;
+	
+	if(x_count >= DELAY_TIME_FOR_COUNT){
+	  if(last_status == 1){
+	    // prs485->ctl_relay(0,1);
+	    eb_alarm(1);
+	  }else{
+	  	eb_alarm(0);
+	  }
+	}
+}
 
 void save_box_obj(ObjectDetectInterface::Out list)
 {
@@ -311,9 +344,14 @@ void save_box_obj(ObjectDetectInterface::Out list)
      XDI[i].x1 = (unsigned char)(box.mBox[1]*255.f/1920.f);
 	 XDI[i].y1 = (unsigned char)(box.mBox[3]*255.f/1080.f);
 	 XDI[i].userid= htonl(box.obj_id);
+	// printf("box.mScore is %f \n",box.mScore);
 	 i++;
 	}
 	box_count_obj = i;
+	if(box_count_obj > 0)
+		eliminate_dithering(1);
+	else
+		eliminate_dithering(0);
 	data_mutex.unlock();
 }
 
@@ -333,7 +371,7 @@ void get_msg_info(up_event *item)
 	item->hour = t->tm_hour;
 	item->min = t->tm_min;
 	item->sec = t->tm_sec;
-	sprintf(item->file_name,"%s%4d%02d%02d%02d%02d%02d.jpg",g_device_sn,t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	sprintf(item->file_name,"%s%4d%02d%02d%02d%02d%02d.jpg",mqtt_user,t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 }
 void save_pic(char* name)
 {
@@ -363,9 +401,9 @@ void print_timeinfo()
 	time(&tt);
 	t = localtime(&tt);
 	#ifdef BUILD_SYSTEM_DEMO
-	printf("systime is  %4d-%02d-%02 d%02:d%02d:%02d \n",t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	printf("systime is  %4d-%02d-%02d %02d:%02d:%02d \n",t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 	#else
-	printf("systime is  %4d-%02d-%02d d%02:d%02d:%02d \n",t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	printf("systime is  %4d-%02d-%02d %02d:%02d:%02d \n",t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 	#endif
 }
 	
@@ -374,7 +412,7 @@ void print_timeinfo()
 void thread_aiot_setup()
 {
 	int ret =0;
-	ret = Aiot_server->mqttc_init(mqtt_server_ip,mqtt_user, mqtt_passwd, mqtt_server_port, g_device_sn);
+	ret = Aiot_server->mqttc_init(mqtt_server_ip,mqtt_user, mqtt_passwd, mqtt_server_port, mqtt_user);
 	if(ret != MQTTC_CONNECTED){
 		printf("Mqttc connect failed!\n");
 	}
@@ -411,7 +449,7 @@ void thread_log_manager()
 		printf("logsize %d \n",logsize);
 		if(logsize > 4000000)
 		{
-			Aiot_server->zq_updatelog();
+			//Aiot_server->zq_updatelog();
 			sleep(20);
 			system("echo start > system.log");
 		}
@@ -516,6 +554,9 @@ void thread_ircut()
 	system("echo \"out\" > /sys/class/gpio/gpio4/direction");
 	system("echo 5 > /sys/class/gpio/export");
 	system("echo \"out\" > /sys/class/gpio/gpio5/direction");
+	system("echo 84 > /sys/class/gpio/export");
+	system("echo \"out\" > /sys/class/gpio/gpio84/direction");
+	system("echo 0 > /sys/class/gpio/gpio84/value");
 	set_ircut(0);
 	while(1)
 	{
@@ -798,6 +839,9 @@ int process_aiotevent(down_event event)
 	case CMD_TYPE_DOWN_RESET:
 		aiot_resetsystem();
 		break;
+	case CMD_TYPE_DOWN_SET_SECURITY_LEVEL:
+		security_level = event.user_data[0];
+		break;
 	default:
 		printf("error cmd type %d \n",event.type);
 		break;
@@ -849,12 +893,14 @@ void thread_wdt_loop()
 	while(1)
 	{
 		sleep(3);
-		if(wdt_alive_flag) {
+		if(wdt_alive_flag){
 			wdt_alive_flag = 0;
 			ret = ioctl(fd, WDIOC_KEEPALIVE);
 		}else{
-			if(ota_stoped == 0)
+			if(system_init_stoped == 0){
 				ret = ioctl(fd, WDIOC_KEEPALIVE);
+				printf("wait for system up!\n");
+			}
 			else
 				printf("vdec has no data!\n need reboot!\n");
 		}

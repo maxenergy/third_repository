@@ -225,7 +225,6 @@ void cloud_server::ftp_up_trigger(char* filename)
 int cloud_server::ftpup(char* fname){
      int ret=0;
 	 static int system_run=0;
-
 	if(ftp_init_flag){
 		char cmd_buf[255];
 		memset(cmd_buf,0,255);
@@ -234,11 +233,6 @@ int cloud_server::ftpup(char* fname){
 			system_run++;
 			ret = system(cmd_buf);
 			system_run --;
-			/*if(ret != 0)
-				printf("ftp up file fialed %s %d \n",cmd_buf,ret);
-			else
-				printf("ftp up file successfully %s %d \n",cmd_buf,ret);
-			*/
 			char del_cmd_buf[100];
 			memset(del_cmd_buf,0,100);
 			sprintf(del_cmd_buf,"rm FtpUp/%s",fname);
@@ -246,6 +240,11 @@ int cloud_server::ftpup(char* fname){
 		}else{
 			printf("update thread is too many need skip, network is not good or ftp is invalid !\n");
 		}
+	}else{
+		char del_cmd_buf[100];
+		memset(del_cmd_buf,0,100);
+		sprintf(del_cmd_buf,"rm FtpUp/%s",fname);
+		system(del_cmd_buf);
 	}
 	return ret;
 }
@@ -577,12 +576,14 @@ bool cloud_server::subscribe_device_control(const char *buffer)
 	return ctl->status;
 }
 
-int security_level = 0;
-
 bool cloud_server::subscribe_device_security_level(const char *buffer)
 {
 	Ctl_Dev_Security_Level *sec_level = (Ctl_Dev_Security_Level *)buffer;
-	security_level = sec_level->level;
+	down_event event;
+	event.type = CMD_TYPE_DOWN_SET_SECURITY_LEVEL;
+	event.user_data[0] = sec_level->level;
+	std::unique_lock<std::mutex> locker(mDown_Mutex);
+	down_fifo.push_back(event);	
 	printf("device_security_level:Level- %d", sec_level->level);
 	return true;
 }

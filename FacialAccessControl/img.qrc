@@ -1,0 +1,27 @@
+<RCC>
+    <qresource prefix="/">
+        <file>img/bg.png</file>
+        <file>img/cap.png</file>
+        <file>img/cap_blue.png</file>
+        <file>img/choose.png</file>
+        <file>img/db.png</file>
+        <file>img/db_blue.png</file>
+        <file>img/device.png</file>
+        <file>img/device_blue.png</file>
+        <file>img/e2078687f7dde79fa9defa52facc620.png</file>
+        <file>img/hihope.png</file>
+        <file>img/Info.png</file>
+        <file>img/info_blue.png</file>
+        <file>img/Input.png</file>
+        <file>img/input_blue.png</file>
+        <file>img/load.png</file>
+        <file>img/select.png</file>
+        <file>img/unchoose.png</file>
+        <file>img/recap_blue.png</file>
+        <file>QSS/base.qss</file>
+        <file>ZK/utf8.txt</file>
+        <file>img/back.png</file>
+        <file>img/reboot.png</file>
+        <file>img/save.png</file>
+    </qresource>
+</RCC>

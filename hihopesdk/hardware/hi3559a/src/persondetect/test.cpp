@@ -193,8 +193,8 @@ void opencl_init(void)
 void opencl_deinit()
 {
 	cl_int	status;
-	status = clReleaseProgram(program);    //Release the program object.
-	status = clReleaseCommandQueue(commandQueue);//Release  Command queue.
+	status = clReleaseProgram(program);    //Release the program object .
+	status = clReleaseCommandQueue(commandQueue);//Release  Command queue .
 	status = clReleaseContext(context);//Release context.
     if (devices != NULL)
     {
@@ -224,10 +224,12 @@ unsigned int get_yolo_reslut(int **ret_buf,unsigned int *len,unsigned int *strid
 		else
 			out_box[i]= &h_out_box[len[i-1]*len[i-1]*3];
 	}
+
 	for(int i =0;i<grid_num;i++)
 	{
 		opencl_get_box(ret_buf[i],len[i],stride[i],&af32Bias[i*6],out_box[i],class_num);
 	}
+
 	memset(out,0,max_box_size*sizeof(SAMPLE_SVP_NNIE_YOLOV2_BBOX_S));
 
 

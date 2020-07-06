@@ -198,21 +198,24 @@ bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out
     return true;
 }
 
+//#define TIME_DEBUG 
 bool ObjectDetectDummyImpl::detect(int device, Frame &frame, ObjectDetectInterface::Out &out) {
     if (frame.mRawdata.empty()) {
         return false;
     }
+#ifdef TIME_DEBUG	
 	struct timeval start_time;
 	struct timeval stop_time;
 	gettimeofday(&start_time, NULL);
+#endif
   	cv::Mat yuvFrame = cv::Mat(frame.mRawdata.mHeiht*3/2, frame.mRawdata.mWidth, CV_8UC1, frame.mRawdata.mData);
-	cv::Mat rgbImage;
-	cv::cvtColor(yuvFrame, rgbImage, cv::COLOR_YUV420sp2BGR);
 	cv::Mat detectImage;
-	resize(rgbImage, detectImage, cv::Size(416, 416), 0, 0, 0);
+	cv::cvtColor(yuvFrame, detectImage, cv::COLOR_YUV420sp2BGR);	
 	yolv3nniealikDetect(detectImage, out);
+#ifdef TIME_DEBUG
 	gettimeofday(&stop_time, NULL);
-	printf("cost %ld ms \n",(stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000);
+	printf("cost all %ld ms \n",(stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000);
+#endif
     return true;
 }
 #endif

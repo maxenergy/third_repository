@@ -2077,7 +2077,8 @@ static HI_S32 SVP_NNIE_Yolo_NonRecursiveArgQuickSort(HI_S32* ps32Array,
 *****************************************************************************/
 static HI_S32 SVP_NNIE_Yolov1_Nms(HI_S32* ps32Score, HI_FLOAT* pf32Bbox,
     HI_U32 u32BboxNum,HI_U32 u32ConfThresh,HI_U32 u32NmsThresh,HI_U32* pu32TmpBuf)
-{
+{
+
     HI_U32 i = 0, j = 0;
     HI_U32 u32Idx1 = 0, u32Idx2 = 0;
     SAMPLE_SVP_NNIE_YOLOV1_SCORE_S *pstScore = (SAMPLE_SVP_NNIE_YOLOV1_SCORE_S*)pu32TmpBuf;
@@ -2616,12 +2617,11 @@ static HI_S32 SVP_NNIE_Yolov3_GetResult(HI_U64 au64InputBlobAddr[],HI_U32 au32Gr
         //permute
         u32Offset = 0;
         ps32InputBlob = SAMPLE_SVP_NNIE_CONVERT_64BIT_ADDR(HI_S32, au64InputBlobAddr[i]);
-        u32ChnOffset = au32GridNumHeight[i]*au32Stride[i]/sizeof(HI_S32); //通道 偏移，每次取完通道数据的 增量
-        u32HeightOffset = au32Stride[i]/sizeof(HI_S32); // 取一行数据后的偏移增量
+        u32ChnOffset = au32GridNumHeight[i]*au32Stride[i]/sizeof(HI_S32);
+        u32HeightOffset = au32Stride[i]/sizeof(HI_S32);
 
 		// 13 x 13 x 85
-		// 重新排列内存数据
-		for (h = 0; h < au32GridNumHeight[i]; h++)
+        for (h = 0; h < au32GridNumHeight[i]; h++)
         {
             for (w = 0; w < au32GridNumWidth[i]; w++)
             {
@@ -2632,7 +2632,7 @@ static HI_S32 SVP_NNIE_Yolov3_GetResult(HI_U64 au64InputBlobAddr[],HI_U32 au32Gr
             }
         }
 //(80+5) * 3 = 255
-// (3 +5) * 3 = 24
+// (4 +5) * 3 = 27
         //decode bbox and calculate score
         for(j = 0; j < au32GridNumWidth[i]*au32GridNumHeight[i]; j++)
         {

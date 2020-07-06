@@ -14,7 +14,7 @@
 #endif
 #include "hi_type.h"
 
-#define TEST_MODE 1
+#define TEST_MODE 0
 #define USE_YOLO_OR_TINYYOLO 1
 #define  MAX_RET_COUNT  4
 typedef struct retbuf
@@ -186,11 +186,8 @@ unsigned int get_yolo_reslut(int **ret_buf,unsigned int *len,unsigned int *strid
 	}
 	return box_count;
 }
-
-
 #endif
 using namespace std;
-cv::Mat alpha = cv::Mat::zeros(PIC_HIGHT, PIC_WIDTH, CV_8UC1);
 DETECT_RET_BUF ret_buf;
 static char **s_ppChCmdArgv = NULL;
 SAMPLE_SVP_NNIE_CFG_S   stNnieCfg[2];
@@ -206,7 +203,6 @@ int TransMatToBuffer(cv::Mat mSrc, uchar* ppBuffer, int nWidth, int nHeight, int
         split(mSrc, channelrgb);
 
          size_t nMemSize = nWidth * nHeight * nBandNum * nBPB;
-        //这样可以改变外部*pBuffer的值
          memset(ppBuffer, 0, nMemSize);
          uchar* pT = ppBuffer;
          for(int i=nBandNum-1;i>=0;i--){
@@ -232,144 +228,6 @@ unsigned int current_time;
 /******************************************************************************
 * function : ive sample
 ******************************************************************************/
-void ipc_loop(char *video_addr)
-{
-    cv::namedWindow("Object Detection", cv::WINDOW_AUTOSIZE);
-    //cv::setWindowProperty("Object Detection", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
-
-
-    cv::VideoCapture vcap;
-    cv::VideoCapture vcap_usb(0);
-    cv::Mat image;
-    const std::string videoStreamAddress(video_addr); // = "http://alik:123456@192.168.1.107:8081";
-    char *buf_show;
-    int nnie_index = 0;
-
-    int font_face = cv::FONT_HERSHEY_COMPLEX;
-    double font_scale = 0.3;
-    int thickness = 1;
-
-    if(cam_mode == IPC_MODE){
-        //open the video stream and make sure it's opened
-        if(!vcap.open(videoStreamAddress)) {
-            std::cout << "Error opening video stream or file" << std::endl;
-            return;
-        }
-    }else{
-        //vcap = new cv::VideoCapture(atoi(video_addr));
-        //open the video stream and make sure it's opened
-        if(!vcap_usb.isOpened()) {
-            std::cout << "Error opening video stream or file" << std::endl;
-            return;
-        }
-
-    }
-
-    cv::Mat matFlipCameraImage;
-    cv::Mat matFakeImage = cv::imread("./fakebg.png", cv::IMREAD_COLOR);
-    if(!matFakeImage.data)
-    {
-        printf("No fakebg data \n");
-        return;
-    }
-    printf("matFakeImage: (%d, %d) \n", matFakeImage.cols, matFakeImage.rows);
-
-    cv::Mat matFakeImageROI = matFakeImage(cv::Rect(450, 0, 1470, 920));
-    printf("matFakeImageROI: (%d, %d) \n", matFakeImageROI.cols, matFakeImageROI.rows);
-
-    cv::Mat matCameraRegionMask = cv::Mat(cv::Size(1470, 920), CV_8UC1, cv::Scalar(1));
-    printf("matCameraRegionMask: (%d, %d) \n", matCameraRegionMask.cols, matCameraRegionMask.rows);
-
-
-    int test_fps=0;
-    struct timeval start_time;
-    struct timeval stop_time;
-    int nnie_skip=0;
-
-    while(1){
-
-            if(cam_mode == IPC_MODE){
-                    if(!vcap.read(matFlipCameraImage)){
-                        std::cout << "IPC No frame" << std::endl;
-                        cv::waitKey();
-                        continue;
-                    }
-            }else{
-                if(!vcap_usb.read(matFlipCameraImage)){
-                        std::cout << "USB No frame" << std::endl;
-                        cv::waitKey();
-                        continue;
-                    }
-            }
-
-           cv::flip(matFlipCameraImage, image, 0);
-
-           cv::Mat dstImage;
-           resize(image, dstImage, cv::Size(416, 416), 0, 0, 3);
-
-            if(nnie_buf_state[nnie_index] == BUF_EMPTY){
-              TransMatToBuffer(dstImage,detect_buf[nnie_index],416,416,3,1);
-              nnie_buf_state[nnie_index] = BUF_FILLED;
-              nnie_skip++;
-              if(nnie_skip >=NNIE_SKIP_FPS){
-                    nnie_skip=0;
-                    nnie_index= nnie_index?0:1;
-                }
-              if(test_fps==0){
-                  gettimeofday(&start_time, NULL);
-                  test_fps++;
-              }
-              else if(test_fps==100){
-                  gettimeofday(&stop_time, NULL);
-                  test_fps = 0;
-                  printf("100fps cost %ld ms \n",(stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/10000);
-              }
-              else
-                  test_fps++;
-            }
-
-            // for(int i =0;i<ret_buf.ret_count;i++)
-            // {
-            //  char socre_buf[20];
-            //  cv::rectangle(dstImage,cvPoint(ret_buf.x0[i],ret_buf.y0[i]),cvPoint(ret_buf.x1[i],ret_buf.y1[i]),
-            //  cv::Scalar(255,0,0),2,1,0);
-            //  std::string text(class_name[ret_buf.class_ret[i]]);
-            //  cv::putText(dstImage, text, cvPoint(ret_buf.x0[i],ret_buf.y0[i]-10), font_face, font_scale, cv::Scalar(0, 0, 255), thickness, 8, 0);
-            // }
-
-
-            for(int i =0;i<ret_buf.ret_count;i++)
-            {
-                char socre_buf[20];
-                cv::rectangle(image,cvPoint(ret_buf.x0[i]*image.cols/416,ret_buf.y0[i]*image.rows/416),cvPoint(ret_buf.x1[i]*image.cols/416,ret_buf.y1[i]*image.rows/416),
-                cv::Scalar(255,0,0),2,1,0);
-                std::string text(class_name[ret_buf.class_ret[i]]);
-                cv::putText(image, text, cvPoint(ret_buf.x0[i]*image.cols/416,ret_buf.y0[i]*image.rows/416-10), font_face, font_scale, cv::Scalar(0, 0, 255), thickness, 8, 0);
-            }
-
-            // for(int i =0;i<ret_buf.ret_count;i++)
-            // {
-            //  char socre_buf[20];
-            //  cv::rectangle(image,cvPoint(ret_buf.x0[i],ret_buf.y0[i]),cvPoint(ret_buf.x1[i],ret_buf.y1[i]),
-            //  cv::Scalar(255,0,0),2,1,0);
-            //  std::string text(class_name[ret_buf.class_ret[i]]);
-            //  cv::putText(image, text, cvPoint(ret_buf.x0[i],ret_buf.y0[i]-10), font_face, font_scale, cv::Scalar(0, 0, 255), thickness, 8, 0);
-            //  printf("%s, %d, %d, %d, %d\n", text, ret_buf.x0[i], ret_buf.y0[i], ret_buf.x1[i], ret_buf.y1[i]);
-            // }
-
-            cv::Mat showImage;
-            resize(image, showImage, cv::Size(1470, 920), 0, 0, 3);
-
-            //showImage.copyTo(matFakeImageROI, matCameraRegionMask);
-
-            cv::imshow("Object Detection", showImage);
-            cv::waitKey(1);
-    }
-
-}
-
-
-
 #define SAMPLE_SVP_NNIE_MAX(a,b)    (((a) > (b)) ? (a) : (b))
 #define SAMPLE_SVP_NNIE_MIN(a,b)    (((a) < (b)) ? (a) : (b))
 
@@ -498,8 +356,41 @@ static HI_S32 SVP_NNIE_Yolov2_NonMaxSuppression( SAMPLE_SVP_NNIE_YOLOV2_BBOX_S* 
     return HI_SUCCESS;
 }
 
-#define SAMPLE_SVP_NNIE_YOLOV3_REPORT_BLOB_NUM 3
+#define SAMPLE_SVP_NNIE_YOLOV3_REPORT_BLOB_NUM 2
 #define SAMPLE_SVP_NNIE_YOLOV3_EACH_GRID_BIAS_NUM 6
+
+static HI_S32 HIHOPE_SVP_NNIE_Sigmoid( HI_FLOAT* pf32Src, HI_U32 u32Num)
+{
+    HI_U32 i = 0;
+
+    for(i = 0; i < u32Num; i++)
+    {
+        pf32Src[i] = SAMPLE_SVP_NNIE_SIGMOID(pf32Src[i]);
+    }
+    return HI_SUCCESS;
+}
+
+static HI_FLOAT HIHOPE_SVP_NNIE_GetMaxVal(HI_FLOAT *pf32Val,HI_U32 u32Num,
+    HI_U32 * pu32MaxValueIndex)
+{
+    HI_U32 i = 0;
+    HI_FLOAT f32MaxTmp = 0;
+
+    f32MaxTmp = pf32Val[0];
+    *pu32MaxValueIndex = 0;
+    for(i = 1;i < u32Num;i++)
+    {
+        if(pf32Val[i] > f32MaxTmp)
+        {
+            f32MaxTmp = pf32Val[i];
+            *pu32MaxValueIndex = i;
+        }
+    }
+
+    return f32MaxTmp;
+}
+
+
 static HI_S32 Hihope_Yolov3_GetResult_L(HI_S32 **pps32InputData,HI_U32 au32GridNumWidth[],
         HI_U32 au32GridNumHeight[],HI_U32 au32Stride[],HI_U32 u32EachGridBbox,HI_U32 u32ClassNum,HI_U32 u32SrcWidth,
         HI_U32 u32SrcHeight,HI_U32 u32MaxRoiNum,HI_U32 u32NmsThresh,HI_U32 u32ConfThresh,
@@ -547,7 +438,81 @@ static HI_S32 Hihope_Yolov3_GetResult_L(HI_S32 **pps32InputData,HI_U32 au32GridN
         pf32Permute = (HI_FLOAT*)ps32TmpBuf;
         pstBbox = (SAMPLE_SVP_NNIE_YOLOV2_BBOX_S*)(pf32Permute+u32MaxBlobSize/sizeof(HI_S32));
         ps32AssistBuf = (HI_S32*)(pstBbox+u32TotalBboxNum);
-        u32BboxNum = get_yolo_reslut(pps32InputData,au32GridNumWidth,au32Stride,(float *)af32Bias,Blob_num,pstBbox);
+
+#if 1
+			for(i = 0; i < SAMPLE_SVP_NNIE_YOLOV3_REPORT_BLOB_NUM; i++)
+			{
+				//permute
+				u32Offset = 0;
+				ps32InputBlob = SAMPLE_SVP_NNIE_CONVERT_64BIT_ADDR(HI_S32, pps32InputData[i]);
+				u32ChnOffset = au32GridNumHeight[i]*au32Stride[i]/sizeof(HI_S32); //ͨ\B5\C0 ƫ\D2ƣ\ACÿ\B4\CEȡ\CD\EAͨ\B5\C0\CA\FD\BEݵ\C4 \D4\F6\C1\BF
+				u32HeightOffset = au32Stride[i]/sizeof(HI_S32); // ȡһ\D0\D0\CA\FD\BEݺ\F3\B5\C4ƫ\D2\C6\D4\F6\C1\BF
+/*
+				printf("u32ChnOffset %d u32HeightOffset %d \n",u32ChnOffset,u32HeightOffset);
+				
+				int prec_index= 0;
+				//13 x 13 = 
+				for(prec_index =0;prec_index<au32GridNumWidth[i]*27;prec_index++)
+				{
+					int32x4x4_t f32_sx;
+        	   		s32_sx = vld4q_int32((int32_t*)ps32InputBlob);
+				}
+*/
+				// 13 x 13 x 85
+
+				for (h = 0; h < au32GridNumHeight[i]; h++)
+				{
+					for (w = 0; w < au32GridNumWidth[i]; w++)
+					{
+						for (c = 0; c < SAMPLE_SVP_NNIE_YOLOV3_EACH_BBOX_INFER_RESULT_NUM*u32EachGridBbox; c++)
+						{
+							pf32Permute[u32Offset++] = (HI_FLOAT)(ps32InputBlob[c*u32ChnOffset+h*u32HeightOffset+w]) / SAMPLE_SVP_NNIE_QUANT_BASE;
+						}
+					}
+				}
+		//(80+5) * 3 = 255
+		// (4 +5) * 3 = 27
+				//decode bbox and calculate score
+				for(j = 0; j < au32GridNumWidth[i]*au32GridNumHeight[i]; j++)
+				{
+					u32GridXIdx = j % au32GridNumWidth[i];
+					u32GridYIdx = j / au32GridNumWidth[i];
+					for (k = 0; k < u32EachGridBbox; k++)
+					{
+						u32MaxValueIndex = 0;
+						u32Offset = (j * u32EachGridBbox + k) * SAMPLE_SVP_NNIE_YOLOV3_EACH_BBOX_INFER_RESULT_NUM;
+						//decode bbox
+						f32StartX = ((HI_FLOAT)u32GridXIdx + SAMPLE_SVP_NNIE_SIGMOID(pf32Permute[u32Offset + 0])) / au32GridNumWidth[i];
+						f32StartY = ((HI_FLOAT)u32GridYIdx + SAMPLE_SVP_NNIE_SIGMOID(pf32Permute[u32Offset + 1])) / au32GridNumHeight[i];
+						f32Width = (HI_FLOAT)(exp(pf32Permute[u32Offset + 2]) * af32Bias[i][2*k]) / u32SrcWidth;
+						f32Height = (HI_FLOAT)(exp(pf32Permute[u32Offset + 3]) * af32Bias[i][2*k + 1]) / u32SrcHeight;
+		
+						//calculate score
+						(void)HIHOPE_SVP_NNIE_Sigmoid(&pf32Permute[u32Offset + 4], (u32ClassNum+1));
+						f32ObjScore = pf32Permute[u32Offset + 4];
+						f32MaxScore = HIHOPE_SVP_NNIE_GetMaxVal(&pf32Permute[u32Offset + 5], u32ClassNum, &u32MaxValueIndex);
+						s32ClassScore = (HI_S32)(f32MaxScore * f32ObjScore*SAMPLE_SVP_NNIE_QUANT_BASE);
+		
+						//filter low score roi
+						if (s32ClassScore > u32ConfThresh)
+						{
+							pstBbox[u32BboxNum].f32Xmin= (HI_FLOAT)(f32StartX - f32Width * 0.5f);
+							pstBbox[u32BboxNum].f32Ymin= (HI_FLOAT)(f32StartY - f32Height * 0.5f);
+							pstBbox[u32BboxNum].f32Xmax= (HI_FLOAT)(f32StartX + f32Width * 0.5f);
+							pstBbox[u32BboxNum].f32Ymax= (HI_FLOAT)(f32StartY + f32Height * 0.5f);
+							pstBbox[u32BboxNum].s32ClsScore = s32ClassScore;
+							pstBbox[u32BboxNum].u32Mask= 0;
+							pstBbox[u32BboxNum].u32ClassIdx = (HI_S32)(u32MaxValueIndex+1);
+							u32BboxNum++;
+						}
+					}
+				}
+			}
+
+#else
+		u32BboxNum = get_yolo_reslut(pps32InputData,au32GridNumWidth,au32Stride,(float *)af32Bias,Blob_num,pstBbox);
+#endif
+		
         (void)SVP_NNIE_Yolo_NonRecursiveArgQuickSort((HI_S32*)pstBbox, 0, u32BboxNum - 1,
             sizeof(SAMPLE_SVP_NNIE_YOLOV3_BBOX_S)/sizeof(HI_U32),4,(SAMPLE_SVP_NNIE_STACK_S*)ps32AssistBuf);
 
@@ -594,7 +559,7 @@ static int Hihope_Yolov3_GetResult(SAMPLE_SVP_NNIE_PARAM_S*pstNnieParam,
         (HI_S32*)pstSoftwareParam->stGetResultTmpBuf.u64VirAddr,
         (HI_S32*)pstSoftwareParam->stDstScore.u64VirAddr,
         (HI_S32*)pstSoftwareParam->stDstRoi.u64VirAddr,
-        (HI_S32*)pstSoftwareParam->stClassRoiNum.u64VirAddr,3);
+        (HI_S32*)pstSoftwareParam->stClassRoiNum.u64VirAddr,2);
 
 }
 #else
@@ -647,15 +612,6 @@ void yolv3nniealikInit()
 {
     stNnieCfg[0].aenNnieCoreId[0]=SVP_NNIE_ID_0;
     stNnieCfg[0].u32MaxInputNum =1;
-
-    for (int i = 0; i < PIC_HIGHT; i++)
-    {
-        for (int j = 0; j < PIC_WIDTH; j++)
-        {
-            alpha.at<uchar>(i, j) = 255;
-        }
-    }
-
 #if USE_YOLO_OR_TINYYOLO
     NNIE_LOAD_MODEL_yolov3(&stNnieCfg[0],&s_stYolov3Model[0],&s_stYolov3NnieParam[0],&s_stYolov3SoftwareParam[0]);
     printf("yolov3 nnie model loaded!\n");
@@ -676,12 +632,14 @@ int font_face = cv::FONT_HERSHEY_COMPLEX;
 double font_scale = 0.3;
 int thickness = 1;
 
+//#define DEBUG_PIC
+
 #ifdef DEBUG_PIC
 int pic_save_skip =0;
 #endif
 
 void yolv3nniealikProcess(cv::Mat &image,ObjectDetectInterface::Out &out) {
-#ifdef DEBUG_PI
+#ifdef DEBUG_PIC
 	int ret = pic_save_skip%5;
 	char full_name[255];
 	if(!ret)
@@ -699,16 +657,28 @@ void yolv3nniealikProcess(cv::Mat &image,ObjectDetectInterface::Out &out) {
 	NNIE_process_yolov3_tiny(detect_buf[0],&stNnieCfg[0],&s_stYolov3NnieParam[0],&s_stYolov3SoftwareParam[0],&ret_buf_temp,TEST_MODE);
 #endif
 
+ if(!TEST_MODE){
+#if USE_YOLO_OR_TINYYOLO
+	 Hihope_Yolov3_GetResult(&s_stYolov3NnieParam[0],&s_stYolov3SoftwareParam[0],2);
+#else
+	 Hihope_Yolov3_tiny_GetResult(&s_stYolov3NnieParam[0],&s_stYolov3SoftwareParam[0],2);
+#endif
+	 (void)SAMPLE_SVP_NNIE_Detection_Result(&s_stYolov3SoftwareParam[0].stDstScore,
+		 &s_stYolov3SoftwareParam[0].stDstRoi, &s_stYolov3SoftwareParam[0].stClassRoiNum,0.5,&ret_buf_temp);
+ }
+
  for(int i =0; i<ret_buf_temp.ret_count; i++){
-	 ObjectDetectOut item;
-	 sprintf(item.mName, "%s",	class_name[ret_buf_temp.class_ret[i]]);
-	 item.mBox[0] = ret_buf_temp.x0[i]*1920/416;
-	 item.mBox[1] = ret_buf_temp.x1[i]*1920/416;
-	 item.mBox[2] = ret_buf_temp.y0[i]*1080/416;
-	 item.mBox[3] = ret_buf_temp.y1[i]*1080/416;
-	 item.mScore = ret_buf_temp.score[i];
-	 item.obj_id = ret_buf_temp.class_ret[i] + 99000;
-	 out.mOutList.push_back(item);
+ 	if((ret_buf_temp.class_ret[i] == 1)&&(ret_buf_temp.score[i] > 0.5)){
+		 ObjectDetectOut item;
+		 sprintf(item.mName, "%s",	class_name[ret_buf_temp.class_ret[i]]);
+		 item.mBox[0] = ret_buf_temp.x0[i]*1920/416;
+		 item.mBox[1] = ret_buf_temp.x1[i]*1920/416;
+		 item.mBox[2] = ret_buf_temp.y0[i]*1080/416;
+		 item.mBox[3] = ret_buf_temp.y1[i]*1080/416;
+		 item.mScore = ret_buf_temp.score[i];
+		 item.obj_id = ret_buf_temp.class_ret[i] + 99000;
+		 out.mOutList.push_back(item);
+ 	}
  }
 
 }

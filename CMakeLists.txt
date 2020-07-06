@@ -1,14 +1,16 @@
 PROJECT(AIPC)
 cmake_minimum_required(VERSION 2.8)
 
+find_package(Qt4 4.8.6 REQUIRED QtCore QtGui QtXml QtNetwork)
+
 #SET(CMAKE_C_COMPILER /media/alik/f54faace-0b8b-4347-99e8-abd0dfe48105/opt/arm-himix200-linux/bin/arm-himix200-linux-gcc)
 
 #SET(CMAKE_CXX_COMPILER /media/alik/f54faace-0b8b-4347-99e8-abd0dfe48105/opt/arm-himix200-linux/bin/arm-himix200-linux-g++)
 
 #export CC=arm-himix200-linux-gcc
 #export CXX=arm-himix200-linux-g++
-
-SET(BOARD_TYPE "IPC")
+#SET(BOARD_TYPE "IPC")
+SET(BOARD_TYPE "LCDBOARD")
 
 #SET(WM_BUILD_TYPE "Official")
 SET(WM_BUILD_TYPE "factory")
@@ -25,8 +27,23 @@ include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/sdk2v0/include)
 SET(sdk_libpath ${CMAKE_SOURCE_DIR}/hihopesdk/libs/lib3516/lib/sdk2v0)
 endif()
 
+#add_definitions(-DZQ_DETECT_E-BICYCLE)
+
 include_directories(${CMAKE_SOURCE_DIR}/rtspserver/src/)
 
+if("${BOARD_TYPE}" STREQUAL "LCDBOARD")
+include_directories(${CMAKE_SOURCE_DIR}/FacialAccessControl/include)
+include_directories(${CMAKE_SOURCE_DIR}/FacialAccessControl)
+include_directories(/usr/local/Qt-4.8.6/include)
+AUX_SOURCE_DIRECTORY(FacialAccessControl  FRG_SRCS)
+SET(qt4_FORMS FacialAccessControl/mainwindow.ui)
+SET(qt4_RESOURCES FacialAccessControl/img.qrc)
+set(CMAKE_AUTOMOC ON)
+QT4_WRAP_UI(qt4_FORMS_headers ${helloworld_FORMS})
+QT4_ADD_RESOURCES(qt4_RESOURCES_headers ${helloworld_RESOURCES})
+INCLUDE(${QT_USE_FILE})
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+endif()
 include_directories(${CMAKE_SOURCE_DIR}/tcp_cmd)
 include_directories(${CMAKE_SOURCE_DIR}/cloudserver/src)
 include_directories(${CMAKE_SOURCE_DIR}/cloudserver/mqtt_client/src)
@@ -59,11 +76,22 @@ if("${WM_BUILD_TYPE}" STREQUAL "factory")
 message("factory BUILD ,only for camtest!")
 add_definitions(-DBUILD_FACTORY_TEST_APP)
 
+if("${BOARD_TYPE}" STREQUAL "IPC")
 add_executable(aipc src/main.cpp)
+else()
+add_executable(aipc ${FRG_SRCS} ${qt4_FORMS_headers} ${qt4_RESOURCES_headers})
+TARGET_LINK_LIBRARIES(aipc ${QT_LIBRARIES})
+endif()
+
 target_link_libraries( aipc hihopesdk rtspserver cloudserver rs485 tcp_cmd minIni -ldl -lpthread)
 else()
 message("Official BUILD !")
+if("${BOARD_TYPE}" STREQUAL "IPC")
 add_executable(aipc src/main.cpp)
+else()
+add_executable(aipc ${FRG_SRCS} ${qt4_FORMS_headers} ${qt4_RESOURCES_headers})
+TARGET_LINK_LIBRARIES(aipc ${QT_LIBRARIES})
+endif()
 target_link_libraries( aipc hihopesdk rtspserver cloudserver rs485 tcp_cmd minIni -ldl -lpthread pola gomp)
 endif()
 

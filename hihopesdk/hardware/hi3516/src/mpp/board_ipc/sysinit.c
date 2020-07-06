@@ -168,8 +168,8 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 	   astVpssChnAttr[VpssChn].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
 
 
-		astVpssChnAttr[VpssChn1].u32Width				   = 960;
-		astVpssChnAttr[VpssChn1].u32Height				   = 540;
+		astVpssChnAttr[VpssChn1].u32Width				   = 416;
+		astVpssChnAttr[VpssChn1].u32Height				   = 416;
 		astVpssChnAttr[VpssChn1].enChnMode				   = VPSS_CHN_MODE_USER;
 		astVpssChnAttr[VpssChn1].enCompressMode			   = enCompressMode;
 		astVpssChnAttr[VpssChn1].enDynamicRange			   = enDynamicRange;
@@ -180,7 +180,13 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 		astVpssChnAttr[VpssChn1].u32Depth 				   = 1;
 		astVpssChnAttr[VpssChn1].bMirror					   = HI_FALSE;
 		astVpssChnAttr[VpssChn1].bFlip					   = HI_FALSE;
-		astVpssChnAttr[VpssChn1].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
+		//astVpssChnAttr[VpssChn1].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
+		astVpssChnAttr[VpssChn1].stAspectRatio.enMode 	   = ASPECT_RATIO_MANUAL;
+		astVpssChnAttr[VpssChn1].stAspectRatio.u32BgColor  = 0xFFFFFF;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.s32X = 0;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.s32Y = 0;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.u32Width = 416;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.u32Height = 416;
 
 
 
@@ -197,8 +203,6 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 		astVpssChnAttr[VpssChn2].bMirror					   = HI_FALSE;
 		astVpssChnAttr[VpssChn2].bFlip					   = HI_FALSE;
 		astVpssChnAttr[VpssChn2].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
-
-		
 
 		abChnEnable[0] = HI_TRUE;
 		abChnEnable[1] = HI_TRUE;

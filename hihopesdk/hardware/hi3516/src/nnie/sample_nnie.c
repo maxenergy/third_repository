@@ -771,7 +771,8 @@ static HI_S32 SAMPLE_SVP_NNIE_Cnn_SoftwareDeinit(SAMPLE_SVP_NNIE_CNN_SOFTWARE_PA
 ******************************************************************************/
 static HI_S32 SAMPLE_SVP_NNIE_Cnn_Deinit(SAMPLE_SVP_NNIE_PARAM_S *pstNnieParam,
     SAMPLE_SVP_NNIE_CNN_SOFTWARE_PARAM_S* pstSoftWareParam,SAMPLE_SVP_NNIE_MODEL_S* pstNnieModel)
-{
+{
+
     HI_S32 s32Ret = HI_SUCCESS;
     /*hardware para deinit*/
     if(pstNnieParam!=NULL)
@@ -3688,7 +3689,7 @@ void NNIE_LOAD_MODEL_yolov3(
         SAMPLE_SVP_NNIE_PARAM_S *s_stYolov3NnieParam_ipc,
         SAMPLE_SVP_NNIE_YOLOV3_SOFTWARE_PARAM_S *s_stYolov3SoftwareParam_ipc)
 {
-    HI_CHAR *pcModelName = "model/inst_yolov3_cycle.wk";
+    HI_CHAR *pcModelName = "model/eb.wk";
     HI_S32 s32Ret = HI_SUCCESS;
     /*Yolov3 Load model*/
     SAMPLE_SVP_TRACE_INFO("Yolov3 Load model!\n");
@@ -3724,24 +3725,20 @@ void NNIE_process_yolov3(
     SAMPLE_SVP_NNIE_PROCESS_SEG_INDEX_S stProcSegIdx = {0};
     HI_FLOAT f32PrintResultThresh = 0.0f;
     /*Set configuration parameter*/
-    f32PrintResultThresh = 0.1f;
+    f32PrintResultThresh = 0.5f;
     HI_S32 s32Ret = HI_SUCCESS;
-
-    /*Fill src data*/
-    if(test_mode)
-        SAMPLE_SVP_TRACE_INFO("Yolov3 start!\n");
 
     stInputDataIdx.u32SegIdx = 0;
     stInputDataIdx.u32NodeIdx = 0;
     s32Ret = SAMPLE_SVP_NNIE_FillSrcData_ptr(data,s_stYolov3NnieParam_ipc,&stInputDataIdx);
-    SAMPLE_SVP_CHECK_EXPR_GOTO(HI_SUCCESS != s32Ret,YOLOV3_FAIL_0,SAMPLE_SVP_ERR_LEVEL_ERROR,
-                               "Error,SAMPLE_SVP_NNIE_FillSrcData failed!\n");
+ //   SAMPLE_SVP_CHECK_EXPR_GOTO(HI_SUCCESS != s32Ret,YOLOV3_FAIL_0,SAMPLE_SVP_ERR_LEVEL_ERROR,
+  //                             "Error,SAMPLE_SVP_NNIE_FillSrcData failed!\n");
 
     /*NNIE process(process the 0-th segment)*/
     stProcSegIdx.u32SegIdx = 0;
     s32Ret = SAMPLE_SVP_NNIE_Forward(s_stYolov3NnieParam_ipc,&stInputDataIdx,&stProcSegIdx,HI_TRUE);
-    SAMPLE_SVP_CHECK_EXPR_GOTO(HI_SUCCESS != s32Ret,YOLOV3_FAIL_0,SAMPLE_SVP_ERR_LEVEL_ERROR,
-                               "Error,SAMPLE_SVP_NNIE_Forward failed!\n");
+//    SAMPLE_SVP_CHECK_EXPR_GOTO(HI_SUCCESS != s32Ret,YOLOV3_FAIL_0,SAMPLE_SVP_ERR_LEVEL_ERROR,
+//                               "Error,SAMPLE_SVP_NNIE_Forward failed!\n");
 
     if(!test_mode)
         return;
@@ -3750,8 +3747,8 @@ void NNIE_process_yolov3(
     /*if user has changed net struct, please make sure SAMPLE_SVP_NNIE_Yolov3_GetResult
          function input datas are correct*/
     s32Ret = SAMPLE_SVP_NNIE_Yolov3_GetResult(s_stYolov3NnieParam_ipc,s_stYolov3SoftwareParam_ipc);
-    SAMPLE_SVP_CHECK_EXPR_GOTO(HI_SUCCESS != s32Ret,YOLOV3_FAIL_0,SAMPLE_SVP_ERR_LEVEL_ERROR,
-                               "Error,SAMPLE_SVP_NNIE_Yolov3_GetResult failed!\n");
+ //   SAMPLE_SVP_CHECK_EXPR_GOTO(HI_SUCCESS != s32Ret,YOLOV3_FAIL_0,SAMPLE_SVP_ERR_LEVEL_ERROR,
+ //                              "Error,SAMPLE_SVP_NNIE_Yolov3_GetResult failed!\n");
     /*print result, this sample has 81 classes:
           class 0:background	  class 1:person	   class 2:bicycle		   class 3:car			  class 4:motorbike 	 class 5:aeroplane
           class 6:bus			  class 7:train 	   class 8:truck		   class 9:boat 		  class 10:traffic light
@@ -3786,7 +3783,10 @@ YOLOV3_FAIL_0:
 ******************************************************************************/
 static HI_S32 SAMPLE_SVP_NNIE_Lstm_Deinit(SAMPLE_SVP_NNIE_PARAM_S *pstNnieParamm,
     SAMPLE_SVP_NNIE_MODEL_S *pstNnieModel)
-{
+{
+
+
+
     HI_S32 s32Ret = HI_SUCCESS;
     /*hardware deinit*/
     if(pstNnieParamm!=NULL)
