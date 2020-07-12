@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     sysinit(&fd,camroute,camflip);
 #ifndef BUILD_FACTORY_TEST_APP
 		log_level_set(1);
-		init_pola_sdk(0,0.4,test_flag);
+		init_pola_sdk(0,0.4,0);
 #endif
     FaceRecognitionApi &app = FaceRecognitionApi::getInstance();
     if (!app.init()) {

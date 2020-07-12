@@ -39,8 +39,11 @@
 #include "zbar.h" 
 #include <vector>
 
-//#define BUILD_SYSTEM_DEMO
+#define OTA_PIC_CHN   1  //416 x 416
+#define QRCODE_PIC_CHN  2  // 960 x 540
+#define XDETECT_PIC_CHN  1  // 416 x 416
 
+//#define BUILD_SYSTEM_DEMO
 #define WDT_DEV_FILE "/dev/watchdog"
 #define FACE_UPPATH "FtpUp"
 #define TCP_CMD_PORT  1314
@@ -159,7 +162,7 @@ char camera_ip_gateway[MAX_PARAM_SIZE];
 
 char g_device_sn[MAX_PARAM_SIZE];
 
-uint8_t sw_ver = 0x7;
+uint8_t sw_ver = 0x8;
 
 uint8_t hw_ver = 0x2;
 

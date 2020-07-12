@@ -9,12 +9,12 @@ find_package(Qt4 4.8.6 REQUIRED QtCore QtGui QtXml QtNetwork)
 
 #export CC=arm-himix200-linux-gcc
 #export CXX=arm-himix200-linux-g++
-#SET(BOARD_TYPE "IPC")
-SET(BOARD_TYPE "LCDBOARD")
 
+SET(BOARD_TYPE "LCDBOARD")
+#SET(BOARD_TYPE "IPC")
 #SET(WM_BUILD_TYPE "Official")
 SET(WM_BUILD_TYPE "factory")
-SET(SDK_VER "2v0")
+SET(SDK_VER "1v0")
 
 SET(CMAKE_CXX_FLAGS  "-g -mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")
 
@@ -36,11 +36,14 @@ include_directories(${CMAKE_SOURCE_DIR}/FacialAccessControl/include)
 include_directories(${CMAKE_SOURCE_DIR}/FacialAccessControl)
 include_directories(/usr/local/Qt-4.8.6/include)
 AUX_SOURCE_DIRECTORY(FacialAccessControl  FRG_SRCS)
-SET(qt4_FORMS FacialAccessControl/mainwindow.ui)
+link_directories(${PROJECT_SOURCE_DIR}/zbar/lib)
+SET(qt4_FORMS FacialAccessControl/*.ui)
 SET(qt4_RESOURCES FacialAccessControl/img.qrc)
+QT4_WRAP_UI(qt4_FORMS_headers ${qt4_FORMS})
+QT4_ADD_RESOURCES(qt4_RESOURCES_headers ${qt4_RESOURCES})
 set(CMAKE_AUTOMOC ON)
-QT4_WRAP_UI(qt4_FORMS_headers ${helloworld_FORMS})
-QT4_ADD_RESOURCES(qt4_RESOURCES_headers ${helloworld_RESOURCES})
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 INCLUDE(${QT_USE_FILE})
 ADD_DEFINITIONS(${QT_DEFINITIONS})
 endif()

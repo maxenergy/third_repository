@@ -267,9 +267,10 @@ void thread_qrcode_setup()
 	printf("qrcode thread started!\n");
 	while(1)
 	{
-		sleep(1);
+		//sleep(1);
+		usleep(1000 * 50);
 		VIFrame mBtnPhoto;
-		FaceRecognitionApi::getInstance().capture(1,mBtnPhoto);
+		FaceRecognitionApi::getInstance().capture(QRCODE_PIC_CHN,mBtnPhoto);
 		cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
 		cv::Mat rgbImage;
 		cv::Mat grayImage;
@@ -373,12 +374,13 @@ void get_msg_info(up_event *item)
 	item->sec = t->tm_sec;
 	sprintf(item->file_name,"%s%4d%02d%02d%02d%02d%02d.jpg",mqtt_user,t->tm_year + 1900,t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 }
+
 void save_pic(char* name)
 {
 	VIFrame mBtnPhoto;
 	char full_name[255];
 	//unsigned char* rgb_buf;
-	FaceRecognitionApi::getInstance().capture(2,mBtnPhoto);
+	FaceRecognitionApi::getInstance().capture(OTA_PIC_CHN,mBtnPhoto);
 //	struct timeval start_time;
 //	struct timeval stop_time;
 
@@ -1355,9 +1357,12 @@ int save_DevConfig(const char *config_buffer)
 	return 0;
     }
 
-    /* remove the header: "INITCAM:" */
-    config_buffer += 8;
-
+	if((config_buffer[0] == 'I')&&(config_buffer[1] == 'N')&&(config_buffer[2] == 'I')&&(config_buffer[3] == 'T')\
+		&&(config_buffer[4] == 'C')&&(config_buffer[5] == 'A')&&(config_buffer[6] == 'M'))
+	{
+    	/* remove the header: "INITCAM:" */
+    	config_buffer += 8;
+	}
     memset(QRdata, 0, 1024);
     memcpy(QRdata, config_buffer, strlen(config_buffer));
 
@@ -1365,8 +1370,20 @@ int save_DevConfig(const char *config_buffer)
     char*temp = strtok(QRdata,";");
     while(temp)
     {
-        char Key = (char)*temp;
-        char *Value = temp+2;
+    	int split_index = 0;
+    	for(split_index=0;split_index<2;split_index++)
+    	{
+			if(temp[split_index+1] == ':')
+			{
+				break;
+			}
+		}
+		if(temp[split_index+1] != ':'){
+			printf("not find key %s !!!",temp);
+			return -1;
+		}
+        char Key = temp[split_index];
+        char *Value = temp+2+split_index;
 
         temp = strtok(NULL, ";");
 
@@ -1567,7 +1584,7 @@ int save_DevConfig(const char *config_buffer)
 
                 break;
             case 'L': /* camera route */
-		tmp_value = atoi(Value);
+		        tmp_value = atoi(Value);
                 if ((tmp_value==0)||(tmp_value==180))
                 {
                     camroute = tmp_value;
@@ -1586,7 +1603,7 @@ int save_DevConfig(const char *config_buffer)
                 }
 
             case 'M': /* camera flip */
-		tmp_value = atoi(Value);
+		        tmp_value = atoi(Value);
                 if ((tmp_value==0)||(tmp_value==1))
                 {
                     camflip = tmp_value;
@@ -1605,11 +1622,17 @@ int save_DevConfig(const char *config_buffer)
                 }
 
             default:
-                printf("ERROR: this key %s doesn't be supported now.\n", temp);
+                printf("ERROR: this key %s key is doesn't be supported now.\n", temp);
                 return -1;
         }
     }
-
+	for(int p=0; p <= 10; p++)
+	{
+		set_ircut(1);
+		sleep(1)
+		set_ircut(0);
+	}
+	printf("device has configed,nned reboot!\n");
     system("reboot");
     return 0;
 }

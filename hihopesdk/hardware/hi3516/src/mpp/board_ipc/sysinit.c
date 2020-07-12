@@ -190,8 +190,8 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 
 
 
-		astVpssChnAttr[VpssChn2].u32Width				   = 384;
-		astVpssChnAttr[VpssChn2].u32Height				   = 216;
+		astVpssChnAttr[VpssChn2].u32Width				   = 960;
+		astVpssChnAttr[VpssChn2].u32Height				   = 540;
 		astVpssChnAttr[VpssChn2].enChnMode				   = VPSS_CHN_MODE_USER;
 		astVpssChnAttr[VpssChn2].enCompressMode			   = enCompressMode;
 		astVpssChnAttr[VpssChn2].enDynamicRange			   = enDynamicRange;

@@ -10,6 +10,7 @@ else()
 include_directories(${CMAKE_SOURCE_DIR}/sdk2v0/include)
 add_definitions(-DBUILD_SDK2V0)
 add_definitions(-DZQ_DETECT_YOLOV3)
+AUX_SOURCE_DIRECTORY(hardware/hi3516/src/yolov3 HIHOPE_SRCS)
 endif()
 
 AUX_SOURCE_DIRECTORY(base/core/src/ai  HIHOPE_SRCS)
@@ -25,7 +26,7 @@ AUX_SOURCE_DIRECTORY(hardware/dummy/src HIHOPE_SRCS)
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/adapter HIHOPE_SRCS)
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/mpp HIHOPE_SRCS)
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/nnie HIHOPE_SRCS)
-AUX_SOURCE_DIRECTORY(hardware/hi3516/src/yolov3 HIHOPE_SRCS)
+
 if("${SDK_VER}" STREQUAL "1v0")
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/common/sdk1v0 HIHOPE_SRCS)
 AUX_SOURCE_DIRECTORY(hardware/hi3516/src/mpp/sdk1v0 HIHOPE_SRCS)
@@ -188,10 +189,6 @@ set_property(TARGET lib_hicalcflicker PROPERTY IMPORTED_LOCATION ${sdk_libpath}/
 add_library(Hi3516DV3_Nr STATIC IMPORTED)
 set_property(TARGET Hi3516DV3_Nr PROPERTY IMPORTED_LOCATION ${sdk_libpath}/Hi3516DV3_Nr.a)
 endif()
-
-
-
-
 if("${BOARD_TYPE}" STREQUAL "IPC")
     message("BUILD IMX327 BOARD!")
     #add_definitions(-DSENSOR0_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT)
@@ -204,6 +201,10 @@ else()
     message("BUILD IMX327 BOARD!")
 	add_definitions(-DSENSOR0_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT)
 	add_definitions(-DSENSOR1_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT)
+	#add_definitions(-DSENSOR0_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT_WDR2TO1)
+	#add_definitions(-DSENSOR1_TYPE=SONY_IMX327_2L_MIPI_2M_30FPS_12BIT_WDR2TO1)
+	#add_definitions(-DCAM_WDR_MODE)
+        add_definitions(-DFACE_DETECT_PIC_800X1280)
 endif()
 
 add_definitions(-Darm)

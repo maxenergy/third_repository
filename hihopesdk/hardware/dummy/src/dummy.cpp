@@ -11,10 +11,12 @@ namespace A {
 #include <vector>
 #include <math.h>
 #include <sys/time.h>
-
+#ifndef BUILD_FACTORY_TEST_APP
+#ifdef ZQ_DETECT_YOLOV3
 void yolv3nniealikInit();
 void yolv3nniealikDetect(cv::Mat &image , ObjectDetectInterface::Out &out);
-
+#endif
+#endif
 
 #define ADD_FACE_NO_LIVENESSCHECK
 
@@ -38,7 +40,9 @@ ReflectObject_SpecRegister_IMPLEMENT(ObjectDetectDummyImpl, AIInterface::getName
 bool ObjectDetectDummyImpl::load(int device) { 
 	std::cout << "dummy objectdetect load \n"; 
 #ifndef BUILD_FACTORY_TEST_APP
+#ifdef ZQ_DETECT_YOLOV3
 	yolv3nniealikInit();
+#endif
 #endif
 	return true; 
 }
@@ -92,7 +96,7 @@ bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) 
 			ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
 		else
 			ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
-        //ret_code = A::detect((const char *)frame.IR_mRawdata.mData, frame.IR_mRawdata.mWidth, frame.IR_mRawdata.mHeiht, A::YUV, &ir_obj, &irLength);
+		  //  ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.IR_mRawdata.mData, frame.IR_mRawdata.mWidth, frame.IR_mRawdata.mHeiht, &ir_obj, &irLength);
 	}
 
 	int t_id[length];
@@ -208,10 +212,12 @@ bool ObjectDetectDummyImpl::detect(int device, Frame &frame, ObjectDetectInterfa
 	struct timeval stop_time;
 	gettimeofday(&start_time, NULL);
 #endif
+#ifdef ZQ_DETECT_YOLOV3
   	cv::Mat yuvFrame = cv::Mat(frame.mRawdata.mHeiht*3/2, frame.mRawdata.mWidth, CV_8UC1, frame.mRawdata.mData);
 	cv::Mat detectImage;
-	cv::cvtColor(yuvFrame, detectImage, cv::COLOR_YUV420sp2BGR);	
+	cv::cvtColor(yuvFrame, detectImage, cv::COLOR_YUV420sp2BGR);
 	yolv3nniealikDetect(detectImage, out);
+#endif
 #ifdef TIME_DEBUG
 	gettimeofday(&stop_time, NULL);
 	printf("cost all %ld ms \n",(stop_time.tv_sec-start_time.tv_sec)*1000+(stop_time.tv_usec-start_time.tv_usec)/1000);

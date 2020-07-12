@@ -1,15 +1,19 @@
 #include "MppPipe.h"
 #include <arm_neon.h>
+
+
+#define LCDBOARD_CHANNEL_FACE_DETECT 2
+
 bool MppPipe::init(int Pipe, int Chn){
 return true;
 }
-
 bool MppPipe::info(int pipe, int chn) {
     VIDEO_FRAME_INFO_S frame;
-    memset(&frame, 0, sizeof(frame));
-   // HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe, chn, &frame, 2000);
-   
-   HI_S32 ret =HI_MPI_VPSS_GetChnFrame(pipe, chn, &frame, 2000);
+    memset(&frame, 0, sizeof(frame));   
+#ifdef FACE_DETECT_PIC_800X1280
+		chn = LCDBOARD_CHANNEL_FACE_DETECT;
+#endif	
+	HI_S32 ret =HI_MPI_VPSS_GetChnFrame(pipe, chn, &frame, 2000);
     if (ret != HI_SUCCESS) {
         printf("[hihope] HI_MPI_VI_GetChnFrame Failed: %#x\n", ret);
         return false;
@@ -41,12 +45,14 @@ bool MppPipe::getFrame(VIFrame &outFrame_bgr,VIFrame &outFrame_ir, int pipe_brg,
     memset(&frame_brg, 0, sizeof(frame_brg));
     frame_brg.u32PoolId = VB_INVALID_POOLID;
     frame_ir.u32PoolId = VB_INVALID_POOLID;
-
-    HI_S32 ret = HI_MPI_VI_GetChnFrame(pipe_brg, chn, &frame_brg, timeout);
+#ifdef FACE_DETECT_PIC_800X1280
+	chn = LCDBOARD_CHANNEL_FACE_DETECT;
+#endif
+    HI_S32 ret = HI_MPI_VPSS_GetChnFrame(pipe_brg, chn, &frame_brg, timeout);
     if (ret != HI_SUCCESS) {
         printf("[hihope]HI_MPI_VI_GetChnFrame Failed: %#x\n", ret);
     }
-    ret = HI_MPI_VI_GetChnFrame(pipe_ir, chn, &frame_ir, timeout);
+    ret = HI_MPI_VPSS_GetChnFrame(pipe_ir, chn, &frame_ir, timeout);
     if (ret != HI_SUCCESS) {
         printf("[hihope]HI_MPI_VI_GetChnFrame Failed: %#x\n", ret);
     }

@@ -35,12 +35,18 @@ static struct fb_bitfield s_a32 = {24, 8, 0};
 static struct fb_bitfield s_r32 = {16, 8, 0};
 static struct fb_bitfield s_g32 = {8,  8, 0};
 static struct fb_bitfield s_b32 = {0,  8, 0};
+
 static HI_S32 start_mpp(HI_U32 *busid,HI_U32 *devid)
 {
     HI_S32                s32Ret = HI_SUCCESS;
 
     HI_S32                s32ViCnt       = 2;
-    VI_PIPE               ViPipe[2]         = {0,2};
+#ifdef CAM_WDR_MODE	
+		VI_PIPE 			  ViPipe[4] 		= {0,1,2,3};
+#else
+		VI_PIPE 			  ViPipe[4] 		= {0,-1,2,-1};
+#endif
+
     VI_CHN			 ViChn			= 0;
 
     VI_ROTATION_EX_ATTR_S stViRotationExAttr;
@@ -52,13 +58,28 @@ static HI_S32 start_mpp(HI_U32 *busid,HI_U32 *devid)
 
     VO_CHN                VoChn          = 0;
 
-    WDR_MODE_E            enWDRMode      = WDR_MODE_NONE;
+#ifdef CAM_WDR_MODE
+		WDR_MODE_E			  enWDRMode 	 = WDR_MODE_2To1_LINE;//WDR_MODE_NONE;
+#else
+		WDR_MODE_E			  enWDRMode 	 = WDR_MODE_NONE;//WDR_MODE_NONE;
+#endif
+
     DYNAMIC_RANGE_E       enDynamicRange = DYNAMIC_RANGE_SDR8;
     PIXEL_FORMAT_E        enPixFormat    = PIXEL_FORMAT_YVU_SEMIPLANAR_420;
     VIDEO_FORMAT_E        enVideoFormat  = VIDEO_FORMAT_LINEAR;
     COMPRESS_MODE_E       enCompressMode = COMPRESS_MODE_NONE;
     VI_VPSS_MODE_E        enMastPipeMode = VI_OFFLINE_VPSS_OFFLINE;
 	VI_CHN_ATTR_S        vi_pstChnAttr;
+	
+	VPSS_GRP		   VpssGrp		  = 0;
+	VPSS_GRP		   VpssGrp_2		  = 2;
+	VPSS_GRP_ATTR_S	  stVpssGrpAttr;
+	VPSS_CHN 		  VpssChn		 = VPSS_CHN0;
+	VPSS_CHN 		  VpssChn1		 = VPSS_CHN1;
+	VPSS_CHN 		  VpssChn2		 = VPSS_CHN2;
+	HI_BOOL			  abChnEnable[VPSS_MAX_PHY_CHN_NUM] = {0};
+	VPSS_CHN_ATTR_S	  astVpssChnAttr[VPSS_MAX_PHY_CHN_NUM];
+	
 	int i = 0;
     /*config vi*/
     SAMPLE_COMM_VI_GetSensorInfo(&stViConfig);
@@ -70,8 +91,8 @@ static HI_S32 start_mpp(HI_U32 *busid,HI_U32 *devid)
 	    stViConfig.astViInfo[i].stDevInfo.ViDev           = devid[i];
 	    stViConfig.astViInfo[i].stDevInfo.enWDRMode       = enWDRMode;
 	    stViConfig.astViInfo[i].stPipeInfo.enMastPipeMode = enMastPipeMode;
-	    stViConfig.astViInfo[i].stPipeInfo.aPipe[0]       = ViPipe[i];
-	    stViConfig.astViInfo[i].stPipeInfo.aPipe[1]       = -1;
+	    stViConfig.astViInfo[i].stPipeInfo.aPipe[0]       = ViPipe[i*2];
+	    stViConfig.astViInfo[i].stPipeInfo.aPipe[1]       = ViPipe[i*2+1];
 	    stViConfig.astViInfo[i].stPipeInfo.aPipe[2]       = -1;
 	    stViConfig.astViInfo[i].stPipeInfo.aPipe[3]       = -1;
 	    stViConfig.astViInfo[i].stChnInfo.ViChn           = ViChn;
@@ -88,28 +109,126 @@ static HI_S32 start_mpp(HI_U32 *busid,HI_U32 *devid)
         return s32Ret;
     }
 
-    /*vi bind vo*/
-    s32Ret = SAMPLE_COMM_VI_Bind_VO(ViPipe[0], ViChn, 0, VoChn);
-    if (HI_SUCCESS != s32Ret)
-    {
-        SAMPLE_PRT("vo bind vpss failed. s32Ret: 0x%x !\n", s32Ret);
-        return s32Ret;
-    }
-
-
 	for(i=0;i<s32ViCnt;i++){
-	    s32Ret = HI_MPI_VI_SetChnRotation(ViPipe[i], ViChn, ROTATION_90);
+	    s32Ret = HI_MPI_VI_SetChnRotation(ViPipe[i*2], ViChn, ROTATION_90);
 	    if (HI_SUCCESS != s32Ret)
 	    {
 	        SAMPLE_PRT("HI_MPI_VI_SetChnRotation failed with %d\n", s32Ret);
 	       return s32Ret;
 	    }
 
-		HI_MPI_VI_GetChnAttr(ViPipe[i], ViChn, &vi_pstChnAttr);
+		HI_MPI_VI_GetChnAttr(ViPipe[i*2], ViChn, &vi_pstChnAttr);
 		vi_pstChnAttr.u32Depth = 8;
 		vi_pstChnAttr.bFlip = HI_TRUE;
-		HI_MPI_VI_SetChnAttr(ViPipe[i],ViChn,&vi_pstChnAttr);
+		HI_MPI_VI_SetChnAttr(ViPipe[i*2],ViChn,&vi_pstChnAttr);
 	}
+
+	/*config vpss*/
+	   hi_memset(&stVpssGrpAttr, sizeof(VPSS_GRP_ATTR_S), 0, sizeof(VPSS_GRP_ATTR_S));
+	   stVpssGrpAttr.stFrameRate.s32SrcFrameRate	= -1;
+	   stVpssGrpAttr.stFrameRate.s32DstFrameRate	= -1;
+	   stVpssGrpAttr.enDynamicRange 				= DYNAMIC_RANGE_SDR8;
+	   stVpssGrpAttr.enPixelFormat					= enPixFormat;
+	   stVpssGrpAttr.u32MaxW						= 1080;
+	   stVpssGrpAttr.u32MaxH						= 1920;
+	   stVpssGrpAttr.bNrEn							= HI_TRUE;
+	   stVpssGrpAttr.stNrAttr.enCompressMode		= COMPRESS_MODE_FRAME;
+	   stVpssGrpAttr.stNrAttr.enNrMotionMode		= NR_MOTION_MODE_NORMAL;
+	
+	   astVpssChnAttr[VpssChn].u32Width 				   = 1080;
+	   astVpssChnAttr[VpssChn].u32Height				   = 1920;
+	   astVpssChnAttr[VpssChn].enChnMode				   = VPSS_CHN_MODE_USER;
+	   astVpssChnAttr[VpssChn].enCompressMode			   = enCompressMode;
+	   astVpssChnAttr[VpssChn].enDynamicRange			   = enDynamicRange;
+	   astVpssChnAttr[VpssChn].enVideoFormat			   = enVideoFormat;
+	   astVpssChnAttr[VpssChn].enPixelFormat			   = enPixFormat;
+	   astVpssChnAttr[VpssChn].stFrameRate.s32SrcFrameRate = 30;
+	   astVpssChnAttr[VpssChn].stFrameRate.s32DstFrameRate = 30;
+	   astVpssChnAttr[VpssChn].u32Depth 				   = 1;
+	   astVpssChnAttr[VpssChn].bMirror					   = HI_FALSE;
+	   astVpssChnAttr[VpssChn].bFlip					   = HI_FALSE;
+	   astVpssChnAttr[VpssChn].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
+
+
+		astVpssChnAttr[VpssChn1].u32Width				   = 416;
+		astVpssChnAttr[VpssChn1].u32Height				   = 416;
+		astVpssChnAttr[VpssChn1].enChnMode				   = VPSS_CHN_MODE_USER;
+		astVpssChnAttr[VpssChn1].enCompressMode			   = enCompressMode;
+		astVpssChnAttr[VpssChn1].enDynamicRange			   = enDynamicRange;
+		astVpssChnAttr[VpssChn1].enVideoFormat			   = enVideoFormat;
+		astVpssChnAttr[VpssChn1].enPixelFormat			   = enPixFormat;
+		astVpssChnAttr[VpssChn1].stFrameRate.s32SrcFrameRate = 30;
+		astVpssChnAttr[VpssChn1].stFrameRate.s32DstFrameRate = 30;
+		astVpssChnAttr[VpssChn1].u32Depth 				   = 1;
+		astVpssChnAttr[VpssChn1].bMirror					   = HI_FALSE;
+		astVpssChnAttr[VpssChn1].bFlip					   = HI_FALSE;
+		astVpssChnAttr[VpssChn1].stAspectRatio.enMode 	   = ASPECT_RATIO_MANUAL;
+		astVpssChnAttr[VpssChn1].stAspectRatio.u32BgColor  = 0xFFFFFF;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.s32X = 0;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.s32Y = 0;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.u32Width = 416;
+		astVpssChnAttr[VpssChn1].stAspectRatio.stVideoRect.u32Height = 416;
+
+
+
+		astVpssChnAttr[VpssChn2].u32Width				   = 800;
+		astVpssChnAttr[VpssChn2].u32Height				   = 1280;
+		astVpssChnAttr[VpssChn2].enChnMode				   = VPSS_CHN_MODE_USER;
+		astVpssChnAttr[VpssChn2].enCompressMode			   = enCompressMode;
+		astVpssChnAttr[VpssChn2].enDynamicRange			   = enDynamicRange;
+		astVpssChnAttr[VpssChn2].enVideoFormat			   = enVideoFormat;
+		astVpssChnAttr[VpssChn2].enPixelFormat			   = enPixFormat;
+		astVpssChnAttr[VpssChn2].stFrameRate.s32SrcFrameRate = 30;
+		astVpssChnAttr[VpssChn2].stFrameRate.s32DstFrameRate = 30;
+		astVpssChnAttr[VpssChn2].u32Depth 				   = 2;
+		astVpssChnAttr[VpssChn2].bMirror					   = HI_FALSE;
+		astVpssChnAttr[VpssChn2].bFlip					   = HI_FALSE;
+		astVpssChnAttr[VpssChn2].stAspectRatio.enMode 	   = ASPECT_RATIO_NONE;
+
+		abChnEnable[0] = HI_TRUE;
+		abChnEnable[1] = HI_TRUE;
+		abChnEnable[2] = HI_TRUE;
+		s32Ret = SAMPLE_COMM_VPSS_Start(VpssGrp, abChnEnable, &stVpssGrpAttr, astVpssChnAttr);
+		if (HI_SUCCESS != s32Ret)
+		{
+		    SAMPLE_PRT("start vpss group failed. s32Ret: 0x%x !\n", s32Ret);
+		    return -1;
+		}
+
+		s32Ret = SAMPLE_COMM_VPSS_Start(VpssGrp_2, abChnEnable, &stVpssGrpAttr, astVpssChnAttr);
+		if (HI_SUCCESS != s32Ret)
+		{
+		    SAMPLE_PRT("start vpss group failed. s32Ret: 0x%x !\n", s32Ret);
+		    return -1;
+		}
+
+
+		/*vi bind vpss*/
+		s32Ret = SAMPLE_COMM_VI_Bind_VPSS(ViPipe[2], ViChn, VpssGrp_2);
+		if (HI_SUCCESS != s32Ret)
+		{
+		    SAMPLE_PRT("vi bind vpss failed. s32Ret: 0x%x !\n", s32Ret);
+		    return -1;
+		}
+
+
+		/*vi bind vpss*/
+		s32Ret = SAMPLE_COMM_VI_Bind_VPSS(ViPipe[0], ViChn, VpssGrp);
+		if (HI_SUCCESS != s32Ret)
+		{
+		    SAMPLE_PRT("vi bind vpss failed. s32Ret: 0x%x !\n", s32Ret);
+		    return -1;
+		}
+
+
+	    /*vi bind vo*/
+	    s32Ret = SAMPLE_COMM_VPSS_Bind_VO(VpssGrp, VPSS_CHN2, 0, VoChn);
+	    if (HI_SUCCESS != s32Ret)
+	    {
+	        SAMPLE_PRT("vo bind vpss failed. s32Ret: 0x%x !\n", s32Ret);
+	        return s32Ret;
+	    }
+
     return s32Ret;
 }
 
@@ -243,6 +362,30 @@ int set_mode(SAMPLE_VO_CONFIG_S*   pstVoDevInfo)
 }
 
 static  SAMPLE_VO_CONFIG_S      stVoDevInfo;
+#ifdef BUILD_SDK2V0
+extern int scence_param_create(char* Path);
+#endif
+static void cam_turing()
+{
+	ISP_NR_ATTR_S ispattr;
+	 HI_MPI_ISP_GetNRAttr(0,&ispattr);
+	 ispattr.enOpType = OP_TYPE_MANUAL;
+	 ispattr.stManual.au8ChromaStr[0] = 0x3;
+	 ispattr.stManual.au8ChromaStr[1] = 0x3;
+	 ispattr.stManual.au8ChromaStr[2] = 0x3;
+	 ispattr.stManual.au8ChromaStr[3] = 0x3;
+	 ispattr.stManual.u8FineStr = 0x80;
+	 ispattr.stManual.u16CoringWgt = 10;
+	 ispattr.stManual.au16CoarseStr[0] = 0x360;
+	 ispattr.stManual.au16CoarseStr[1] = 0x360;
+	 ispattr.stManual.au16CoarseStr[2] = 0x360;
+	 ispattr.stManual.au16CoarseStr[3] = 0x360;
+
+	 HI_MPI_ISP_SetNRAttr(0,&ispattr);
+
+}
+
+
 int sysinit(int *fd_out)
 {
     HI_S32           s32Ret       = HI_FAILURE;
@@ -265,6 +408,11 @@ int sysinit(int *fd_out)
     stVoDevInfo.enVoMode          = VO_MODE_1MUX;
     set_mode(&stVoDevInfo);
 	start_mpp(busid,devid);
+	#ifdef BUILD_SDK2V0
+	scence_param_create("/home/param");
+	#else	
+	cam_turing();
+    #endif	
 	fb_start(&fd_out);
     return (s32Ret);
 }

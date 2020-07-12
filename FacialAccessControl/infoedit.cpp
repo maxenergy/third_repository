@@ -295,18 +295,16 @@ void InfoEdit::capture()
     if(mIsCap)
     {
         stopPreview();
-        FaceRecognitionApi::getInstance().capture(mBtnPhoto);
+        FaceRecognitionApi::getInstance().capture(2,mBtnPhoto);
 		if(RGB_BUF == 0){
 			RGB_BUF = (unsigned char*)malloc(mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
 		}
-		
-		printf("mBtnPhoto.mHeiht %d mBtnPhoto.mWidth %d \n",mBtnPhoto.mHeiht,mBtnPhoto.mWidth,mPicLab->width(),mPicLab->height());
-		
-        YVU420P_TO_RGB24(mBtnPhoto.mData,RGB_BUF,mBtnPhoto.mWidth,mBtnPhoto.mHeiht);
-       // QImage image(rgb_buf,mBtnPhoto.mHeiht, mBtnPhoto.mWidth, mBtnPhoto.step, QImage::Format_RGB888);
-		QImage image(RGB_BUF, mBtnPhoto.mWidth,  mBtnPhoto.mHeiht,QImage::Format_RGB888);
-	    QImage simage = image.scaled(800, 1280, Qt::IgnoreAspectRatio);
-        QImage scaledImage = simage.copy(0, 88,mPicLab->width(), mPicLab->height());
+		cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
+		cv::Mat dstImage;
+		cv::cvtColor(yuvFrame, dstImage, cv::COLOR_YUV420sp2RGB);
+		memcpy(RGB_BUF,(unsigned char*)dstImage.data,mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
+		QImage image = QImage((unsigned char*)dstImage.data,dstImage.cols, dstImage.rows,dstImage.step,QImage::Format_RGB888);
+        QImage scaledImage = image.copy(0, 88,mPicLab->width(), mPicLab->height());
         mPicLab->setPixmap(QPixmap::fromImage(scaledImage));
 		mPicLab->show();
         mCapBtn->setText("OK");
@@ -318,8 +316,7 @@ void InfoEdit::capture()
 		mInfoFrame->show();
         mCapBtn->setText("");
 		QImage image(RGB_BUF, mBtnPhoto.mWidth,  mBtnPhoto.mHeiht,QImage::Format_RGB888);
-		QImage simage = image.scaled(800, 1280, Qt::IgnoreAspectRatio);
-		QImage scaledImage = simage.copy(0, 88,mPicLab->width(), mPicLab->height());
+		QImage scaledImage = image.copy(0, 88,mPicLab->width(), mPicLab->height());
 		QImage scaledImage2 = scaledImage.scaled(mFaceBtn->width(), mFaceBtn->height(), Qt::IgnoreAspectRatio);
 		mFaceBtn->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
         mFaceBtn->setPixmap(QPixmap::fromImage(scaledImage2));
