@@ -16,6 +16,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(800, 1280-20) ;       //sub 200 for test,need to restore
+    setWindowFlags(Qt::CustomizeWindowHint);
+
    // pixmap.load(":/img/bg.png") ;
     //加载qss文件
     QFile qssFile(":/QSS/base.qss") ;
@@ -24,11 +26,10 @@ MainWindow::MainWindow(QWidget *parent) :
     qss = qssFile.readAll();
     qssFile.close() ;
     this->setStyleSheet(qss);
-	 mHomePage = new HomePage(this) ;
-	 mHomePage->show() ;
 
     //首页界面
     mHomePage = new HomePage(this) ;
+    mHomePage->show() ;
     //connect(this, SIGNAL(frameAviable(cv::Mat)), mHomePage, SLOT(updateUI(cv::Mat))) ;
     connect(this, SIGNAL(frameAviable_box()), this, SLOT(update_box(void)));
     connect(mHomePage, SIGNAL(switchUI(int)), this, SLOT(getPage(int))) ;
@@ -112,7 +113,7 @@ void MainWindow::getPage(int pageNum)
         mHomePage->show() ;
         break ;
     case 31:
-		disconnect(this, SIGNAL(frameAviable_box()), this, SLOT(update_box(void)));
+	disconnect(this, SIGNAL(frameAviable_box()), this, SLOT(update_box(void)));
         mHomePage->hide() ;
         mInfoEdit->hide() ;
         mFaceInput->show() ;
@@ -121,7 +122,7 @@ void MainWindow::getPage(int pageNum)
         connect(this, SIGNAL(frameAviable(cv::Mat)), mFaceInput, SLOT(updateUI(cv::Mat))) ;
         break ;
     case 32 :
-		disconnect(this, SIGNAL(frameAviable_box()), this, SLOT(update_box(void)));
+	disconnect(this, SIGNAL(frameAviable_box()), this, SLOT(update_box(void)));
         mHomePage->hide() ;
         mFaceInput->hide() ;
         mInfoEdit->show() ;
