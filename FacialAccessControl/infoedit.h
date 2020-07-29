@@ -44,7 +44,8 @@ private slots:
     void updateUI(cv::Mat mat) ;
     void stopPreview();
     void startPreview();
-	void getStrFromKey(QString word) ;
+    void getStrFromKey(QString word) ;
+
 signals:
     void backFaceInputPage(int num) ;
 private:

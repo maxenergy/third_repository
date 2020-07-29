@@ -15,7 +15,7 @@ InfoEdit::InfoEdit(QWidget *parent) :
     connect(mSaveBtn, SIGNAL(clicked()), this, SLOT(store())) ;
     drawTable(ui->infotab, 6) ;
     mIsCap = false ;
-	RGB_BUF = 0;
+    RGB_BUF = 0;
 }
 
 InfoEdit::~InfoEdit()
@@ -61,13 +61,13 @@ void InfoEdit::initUI()
 
     mFaceBtn = new customerqlabel(mInfoFrame);
     mFaceBtn->setObjectName("mFaceBtn");
-	QPixmap pmix;// = new QPixmap();
+    QPixmap pmix;// = new QPixmap();
     pmix.load(":/img/bg.png");
-	mFaceBtn->setPixmap(pmix);
+    mFaceBtn->setPixmap(pmix);
     mFaceBtn->setText(QString::fromUtf8("录入人脸")) ;
-	mFaceBtn->setGeometry(575, 20, 160, 210);
+    mFaceBtn->setGeometry(575, 20, 160, 210);
 
-	//mFaceBtn->move(580, 40);
+    //mFaceBtn->move(580, 40);
 	
     connect(mFaceBtn, SIGNAL(clicked()), this, SLOT(faceInputClicked())) ;
 	

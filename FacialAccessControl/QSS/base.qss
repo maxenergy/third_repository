@@ -61,7 +61,6 @@ QLabel#mVideoLab{
 	background-color: rgb(198, 198, 198);
 }
 
-
 QFrame#mSettingFrame{
 	background-color:white ;
 	border:1px solid rgb(211, 215, 207);
@@ -72,38 +71,71 @@ QPushButton#mSaveBtn{
 	border-image: url(:/img/save.png);
 }
 
-QLabel#mModeSelectionLab{
+QLabel#mDeviceIpAddrSetLab{
 	color: rgb(0, 0,0) ;
 	font-size:30px;
 }
 
-QCheckBox#mKaoQinCheck{
-	spacing: 20px;
-	font-size:30px ;
-}
-
-
-QCheckBox#mKaoQinCheck::indicator{
-    width: 30px;
-    height: 30px;
-}
-
-QCheckBox#mKaoQinCheck::indicator:unchecked{
-    image:url(:/img/unchoose.png);
-}
-
-QCheckBox#mKaoQinCheck::indicator:checked{
-    image:url(:/img/choose.png);
-}
-
-QTextEdit#mDeviceDescribeEdit{
+QLineEdit#mDeviceIpAddrEdit{
 	border:2px solid rgb(40, 147, 255) ;
 	border-radius:5px ;
 	font-size:30px ;
 }
 
+QLabel#mDeviceIpMaskSetLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
 
+QLineEdit#mDeviceIpMaskEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:30px ;
+}
 
+QLabel#mDeviceIpGatewaySetLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
+QLineEdit#mDeviceIpGatewayEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:30px ;
+}
+
+QLabel#mDeviceMQTTServerIpAddrSetLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
+QLineEdit#mDeviceMQTTServerIpAddrEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:30px ;
+}
+
+QLabel#mDeviceFtpIpAddrSetLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
+QLineEdit#mDeviceFtpIpAddrEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:30px ;
+}
+
+QLabel#mDeviceIdSetLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
+QLineEdit#mDeviceIdSetEdit{
+	border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
+	font-size:30px ;
+}
 
 QFrame#mInfoFrame{
 	background-color:white ;

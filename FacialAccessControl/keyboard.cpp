@@ -153,6 +153,35 @@ void KeyBoard::enter(QAbstractButton* btn)
             display() ;
         }
     }
+    else if(btn->text() == "}\n]")
+    {
+        emit sendStr("]") ;
+    }
+    else if(btn->text() == "{\n[")
+    {
+        emit sendStr("[") ;
+    }
+    else if(btn->text() == ":\n;")
+    {
+	emit sendStr(";");
+    }
+    else if(btn->text() == "\"\n\'")
+    {
+	emit sendStr("\'");
+    }
+    else if(btn->text() == "<\n,")
+    {
+        emit sendStr(",");
+    }
+    else if(btn->text() == ">\n.")
+    {
+	emit sendStr(".");
+    }
+    else if(btn->text() == "?\n/")
+    {
+	emit sendStr("/");
+    }
+
 }
 
 //第3个按钮组（选择汉字）
@@ -175,7 +204,6 @@ void KeyBoard::buttonGroup3(QAbstractButton* btn)
     }
     ui->pushButton_51->setText("");
     curPageNum = 0 ;
-
 }
 //获得键盘输入 的字符串
 void KeyBoard::GetText(QAbstractButton* btn)
@@ -251,9 +279,3 @@ void KeyBoard::display()
     }
 
 }
-
-
-
-
-
-

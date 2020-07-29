@@ -4,8 +4,11 @@
 #include <QFrame>
 #include <QLabel>
 #include <QCheckBox>
-#include <QTextEdit>
+#include <QLineEdit>
 #include <QPushButton>
+#include <QMouseEvent>
+
+#include "keyboard.h"
 
 namespace Ui {
 class DeviceSettings;
@@ -18,11 +21,22 @@ class DeviceSettings : public QFrame
 public:
     explicit DeviceSettings(QWidget *parent = nullptr);
     ~DeviceSettings();
+
+    //鼠标点击事件重载
+    void mousePressEvent(QMouseEvent *event)  ;
+    //过滤器
+    bool eventFilter(QObject *obj, QEvent *e) ;
+
 private slots:
     void backBtnClicked() ;
     void store() ;
+    void startPreview();
+    void stopPreview();
+    void getStrFromKey(QString word) ;
+
 signals:
     void backHomePage(int pageNum) ;
+
 private:
     Ui::DeviceSettings *ui;
     //head
@@ -31,12 +45,25 @@ private:
     QPushButton* mBackBtn ;
     QPushButton* mSaveBtn ;
     //settings
+    QLabel *mDeviceIpAddrSetLab;
+    QLineEdit *mDeviceIpAddrEdit ;
+    QLabel *mDeviceIpMaskSetLab;
+    QLineEdit *mDeviceIpMaskEdit ;
+    QLabel *mDeviceIpGatewaySetLab;
+    QLineEdit *mDeviceIpGatewayEdit;
+    QLabel *mDeviceMQTTServerIpAddrSetLab;
+    QLineEdit *mDeviceMQTTServerIpAddrEdit;
+    QLabel *mDeviceFtpIpAddrSetLab;
+    QLineEdit *mDeviceFtpIpAddrEdit;
+    QLabel *mDeviceIdSetLab;
+    QLineEdit *mDeviceIdSetEdit;
+
     QFrame* mSettingFrame ;
-    QLabel* mModeSelectionLab ;
-    QCheckBox* mKaoQinCheck ;
-    QCheckBox* mAccessCheck ;
-    QLabel* mDeviceDescribeLab ;
-    QTextEdit* mDeviceDescribeEdit ;
+
+    bool mIsStopPreview = false;
+    KeyBoard *mKeyBoard ;
+    QString str1 ;
+    QFrame* mKeyFrame ;
 
     void initUI() ;
 };

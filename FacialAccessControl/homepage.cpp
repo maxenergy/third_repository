@@ -17,9 +17,9 @@ HomePage::HomePage(QWidget *parent) :
     mMessageBoxFrame->move(0,0) ;
 
     connect(mMessageBoxFrame, SIGNAL(sendOperate(QString)), this, SLOT(getPassword(QString))) ;
-	connect(mMessageBoxFrame, SIGNAL(hide_window(void)), this, SLOT(hidemasgbox(void))) ;
+    connect(mMessageBoxFrame, SIGNAL(hide_window(void)), this, SLOT(hidemasgbox(void))) ;
 
-	mMessageBoxFrame->hide() ;
+    mMessageBoxFrame->hide() ;
     mTimer.start(1000) ;
 }
 

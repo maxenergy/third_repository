@@ -27,9 +27,9 @@ FaceInput::~FaceInput()
 void FaceInput::initUI()
 {
     //head
-	QTextCodec::setCodecForTr(QTextCodec::codecForName("UTF8"));
-	QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF8"));
-	QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF8"));
+    QTextCodec::setCodecForTr(QTextCodec::codecForName("UTF8"));
+    QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF8"));
+    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("UTF8"));
 	
     mTitleFrame = new QFrame(this) ;
     mTitleFrame->setObjectName("mTitleFrame");
@@ -41,13 +41,15 @@ void FaceInput::initUI()
     mTitle->setObjectName("mTitle");
     mTitle->setGeometry((800-144)/2, 26, 144, 36);
     mTitle->setText(QString::fromUtf8("ÈËÁ³Â¼Èë"));
+
     //show video
     mPicLab = new QLabel(this) ;
     mPicLab->setObjectName("mPicLab") ;
     mPicLab->setGeometry(80, this->y()+332 + 88, 640, 480) ;
     mPicLab->setAlignment(Qt::AlignCenter) ;
     mPicLab->setText("starting...") ;
-	mPicLab->hide();
+    mPicLab->hide();
+
     //bottom
     mBottomFrame = new QFrame(this) ;
     mBottomFrame->setObjectName("mBottomFrame") ;
