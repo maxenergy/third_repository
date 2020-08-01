@@ -8,12 +8,11 @@ InfoEdit::InfoEdit(QWidget *parent) :
 {
     ui->setupUi(this);
     setFixedSize(800, 1280-20) ; //sub 200 for test,need to restore
-    mCheckBoxGroup = new QButtonGroup(this) ;
-    connect(mCheckBoxGroup, SIGNAL(buttonClicked(int)), this, SLOT(checkBoxClicked(int))) ;
     initUI() ;
+
     connect(mBackBtn, SIGNAL(clicked()), this, SLOT(backBtnClicked())) ;
     connect(mSaveBtn, SIGNAL(clicked()), this, SLOT(store())) ;
-    drawTable(ui->infotab, 6) ;
+
     mIsCap = false ;
     RGB_BUF = 0;
 }
@@ -26,9 +25,11 @@ InfoEdit::~InfoEdit()
 void InfoEdit::initUI()
 {
     //head
+
     mTitleFrame = new QFrame(this) ;
     mTitleFrame->setObjectName("mTitleFrame") ;
     mTitleFrame->setGeometry(0, 0, this->width(), 88) ;
+
     mBackBtn = new QPushButton(mTitleFrame) ;
     mBackBtn->setObjectName("mBackBtn") ;
     mBackBtn->setGeometry(40, 14, 60, 60) ;
@@ -42,22 +43,26 @@ void InfoEdit::initUI()
 
     mInfoFrame = new QFrame(this) ;
     mInfoFrame->setObjectName("mInfoFrame") ;
-    mInfoFrame->setGeometry(20, 52 + 88, 760, 1000) ;
+    mInfoFrame->setGeometry(this->x()+20, this->y()+147 + 88, 760, 300) ;
+
     mNameLab = new QLabel(mInfoFrame) ;
-    mNameLab->setObjectName("mModeSelectionLab") ;
-    mNameLab->move(20,47) ;
+    mNameLab->setObjectName("mNameLab") ;
+    mNameLab->move(parentWidget()->x()+20,parentWidget()->y()+47) ;
     mNameLab->setText(QString::fromUtf8("姓名")) ;
+
     mNameEdit = new QLineEdit(mInfoFrame) ;
     mNameEdit->setObjectName("mNameEdit") ;
-    mNameEdit->setGeometry(100, 40,380, 60) ;
+    mNameEdit->setGeometry(parentWidget()->x()+100,parentWidget()->y()+40, 380, 60) ;
     mNameEdit->setFocus() ;
+
     mUserIDLab = new QLabel(mInfoFrame) ;
-    mUserIDLab->setObjectName("mModeSelectionLab") ;
-    mUserIDLab->move(20, 147) ;
+    mUserIDLab->setObjectName("mUserIDLab") ;
+    mUserIDLab->move(parentWidget()->x()+20, parentWidget()->y()+147) ;
     mUserIDLab->setText(QString::fromUtf8("工号")) ;
+
     mUserIDEdit = new QLineEdit(mInfoFrame) ;
     mUserIDEdit->setObjectName("mUserIDEdit") ;
-    mUserIDEdit->setGeometry(100, 140, 380, 60) ;
+    mUserIDEdit->setGeometry(parentWidget()->x()+100,parentWidget()->y()+140, 380, 60) ;
 
     mFaceBtn = new customerqlabel(mInfoFrame);
     mFaceBtn->setObjectName("mFaceBtn");
@@ -65,54 +70,12 @@ void InfoEdit::initUI()
     pmix.load(":/img/bg.png");
     mFaceBtn->setPixmap(pmix);
     mFaceBtn->setText(QString::fromUtf8("录入人脸")) ;
-    mFaceBtn->setGeometry(575, 20, 160, 210);
+    mFaceBtn->setGeometry(parentWidget()->x()+575, parentWidget()->y()+20, 160, 210);
 
-    //mFaceBtn->move(580, 40);
-	
     connect(mFaceBtn, SIGNAL(clicked()), this, SLOT(faceInputClicked())) ;
-	
-    mLitleLab = new QLabel(mInfoFrame) ;
-    mLitleLab->setObjectName("mLitleLab") ;
-    mLitleLab->setGeometry(20, 240, 6, 36) ;
-    mLimitsLab = new QLabel(mInfoFrame) ;
-    mLimitsLab->setObjectName("mModeSelectionLab") ;
-    mLimitsLab->move(42, 234) ;
-    mLimitsLab->setText(QString::fromUtf8("权限")) ;
-    ui->infotab->setParent(mInfoFrame) ;
-    ui->infotab->setGeometry(20,314, 720, 464) ;
-    ui->infotab->setColumnCount(2) ;
-    QStringList headerLabels  ;
-    headerLabels << QString::fromUtf8("描述") << QString::fromUtf8("权限") ;
-    ui->infotab->setHorizontalHeaderLabels(headerLabels) ;
-    ui->infotab->verticalHeader()->setMinimumWidth(80) ;
-    ui->infotab->verticalHeader()->setDefaultAlignment(Qt::AlignCenter) ;
-    ui->infotab->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter) ;
-    ui->infotab->horizontalHeader()->setMinimumHeight(104) ;
-    ui->infotab->horizontalScrollBar()->hide() ;
-    ui->infotab->horizontalScrollBar()->setEnabled(false) ;
-    ui->infotab->setColumnWidth(0, 452);
-    ui->infotab->setColumnWidth(1, 188) ;
-#if 0
-	QPalette pal = palette();
-	pal.setColor(QPalette::Background, QColor(0x00,0x00,0x00,0x00));
 
-    mFaceInputFrame = new QFrame(this) ;
-    mFaceInputFrame->setObjectName("mFaceInputFrame") ;
-    //mFaceInputFrame->setGeometry(60, 233, 680, 540) ;
-    mFaceInputFrame->setGeometry(0, 80, 800, 1100) ;
-    mFaceInputFrame->hide() ;
-	mFaceInputFrame->setPalette(pal);
-
-    mVideoLab = new QLabel(mFaceInputFrame) ;
-    mVideoLab->setObjectName("mPicLab") ;
-   // mVideoLab->setGeometry(20, 30, 640, 480) ;
-    mVideoLab->setAlignment(Qt::AlignCenter);
-    mVideoLab->setText("starting...") ;
-	mVideoLab->hide();
-#endif
     mPicLab = new QLabel(this) ;
     mPicLab->setObjectName("mPicLab");
-   // mPicLab->setGeometry(20, 30, 640, 480) ;
     mPicLab->setGeometry(0, 88, 800, 1280-88-100-20-20) ;
     mPicLab->setAlignment(Qt::AlignCenter) ;
     mPicLab->setText("starting...") ;
@@ -121,81 +84,40 @@ void InfoEdit::initUI()
     mCapBtn = new QPushButton(this) ;
     mCapBtn->setObjectName("info_cap_btn") ;
     mCapBtn->setGeometry(10+800/2-30,30+1100-10-60,60,60) ;
-	mCapBtn->hide();
+    mCapBtn->hide();
     connect(mCapBtn, SIGNAL(clicked()), this, SLOT(capture())) ;
 
     mReCapBtn = new QPushButton(this) ;
     mReCapBtn->setObjectName("info_back_btn") ;
     mReCapBtn->setText(QString::fromUtf8("返回")) ;
     mReCapBtn->setGeometry(50,30+1100-10-60,60,60) ;
-    mCapBtn->hide();
+    mReCapBtn->hide();
     connect(mReCapBtn, SIGNAL(clicked()), this, SLOT(reCapture())) ;
 
-//    mKeyFrame = new QFrame(this) ;
-//    mKeyFrame->hide() ;
-//    mKeyFrame->setStyleSheet("background-color: rgb(255, 255, 255);") ;
     mKeyBoard = new KeyBoard(this) ;
     connect(mKeyBoard, SIGNAL(sendStr(QString)), this, SLOT(getStrFromKey(QString))) ;
     mKeyBoard->move(this->x(), this->height()-mKeyBoard->height()-30) ;
+
     mNameEdit->installEventFilter(this);
     mUserIDEdit->installEventFilter(this);
-}
 
-void InfoEdit::drawTable(QTableWidget *table, int Row)
-{
-    table->setRowCount(Row);
-    for(int i = 0 ; i < Row ; i++){
-        ui->infotab->setRowHeight(i, 60) ;
-        //describe
-        QTableWidgetItem *item = new QTableWidgetItem ;
-        item->setText(QString::fromUtf8("233333 门禁 B栋1楼101"));
-        item->setFlags(item->flags() & ~Qt::ItemIsEnabled & ~Qt::ItemIsSelectable);
-        item->setTextAlignment(Qt::AlignCenter);
-        ui->infotab->setItem(i, 0, item) ;
-        //checkbox
-        QCheckBox* box = new QCheckBox(mInfoFrame) ;
-        box->setObjectName("limtBox") ;
-        box->setText("enable") ;
-        mCheckBoxGroup->addButton(box, i) ;
-        mCheckBoxGroup->setExclusive(false);
-       // box->setCheckState(Qt::Checked) ;
-        ui->infotab->setCellWidget(i, 1, box) ;
-    }
 }
 
 void InfoEdit::backBtnClicked()
 {
-	QPixmap pmix;// = new QPixmap();
+    QPixmap pmix;// = new QPixmap();
     pmix.load(":/img/bg.png");
-	mFaceBtn->setPixmap(pmix);
-	mFaceBtn->setText(QString::fromUtf8("录入人脸"));
-	mNameEdit->setText("");
-	mUserIDEdit->setText("");
+    mFaceBtn->setPixmap(pmix);
+    mFaceBtn->setText(QString::fromUtf8("录入人脸"));
+    mNameEdit->setText("");
+    mUserIDEdit->setText("");
     emit backFaceInputPage(0) ;
-}
-
-void InfoEdit::checkBoxClicked(int id)
-{
-    QAbstractButton *pButton =mCheckBoxGroup->button(id);
-       QCheckBox *pBox =(QCheckBox*)pButton;
-       if(pBox->checkState()==Qt::Checked)
-       {
-           QString str;
-           int  nNum =id + 1;
-           str.setNum(nNum);
-           mInfoMap[id] = "233333";
-           //ui->tableWidget->setItem(id,0,new QTableWidgetItem(str));
-       }
-       else
-       {
-            mInfoMap.remove(id) ;
-           //ui->tableWidget->takeItem(id,0);
-       }
 }
 
 void InfoEdit::store()
 {
    // std::string userName = mNameEdit->text().toStdString();
+
     std::string userName = mNameEdit->text().toUtf8().constData();
     int userId = mUserIDEdit->text().toInt() ;
     if(userName !="" && userId != -1)
@@ -218,36 +140,21 @@ void InfoEdit::store()
         }
         std::cout << "add {" << userId << ", "<< userName << "} ok" << std::endl;
         mCurrentUserId = userId;
-
-        //保存用户权限
-        PermissionInfo permission ;
-        permission.mUserID = userId ;
-        if(!mInfoMap.empty())
-        {
-            QMap<int, QString>::Iterator iter;
-            for(iter = mInfoMap.begin(); iter != mInfoMap.end(); iter++)
-            {
-                //qDebug()<<iter.key()<<"  "<<iter.value();
-                permission.mDeviceID = iter.value().toInt() ;
-                permission.mPermission = 1 ;
-                FaceRecognitionApi::getInstance().updatePermissionInfo(permission) ;
-            }
-        }
-        else {
-            //未选择设备权限，确定保存？
-        }
     }
     else {
         //用户名工号不能为空
     }
+
 }
 
 void InfoEdit::faceInputClicked()
 {
   //  mFaceInputFrame->show() ;
+
 	mCapBtn->show();
 	mReCapBtn->show();
 	mInfoFrame->hide();
+
 }
 
 void InfoEdit::YVU420P_TO_RGB24(unsigned char *data, unsigned char *rgb, int width, int height) {
@@ -291,34 +198,35 @@ void InfoEdit::YVU420P_TO_RGB24(unsigned char *data, unsigned char *rgb, int wid
 
 void InfoEdit::capture()
 {
+
     mIsCap = !mIsCap ;
     if(mIsCap)
     {
         stopPreview();
         FaceRecognitionApi::getInstance().capture(2,mBtnPhoto);
-		if(RGB_BUF == 0){
-			RGB_BUF = (unsigned char*)malloc(mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
-		}
-		cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
-		cv::Mat dstImage;
-		cv::cvtColor(yuvFrame, dstImage, cv::COLOR_YUV420sp2RGB);
-		memcpy(RGB_BUF,(unsigned char*)dstImage.data,mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
-		QImage image = QImage((unsigned char*)dstImage.data,dstImage.cols, dstImage.rows,dstImage.step,QImage::Format_RGB888);
+	if(RGB_BUF == 0){
+		RGB_BUF = (unsigned char*)malloc(mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
+	}
+	cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
+	cv::Mat dstImage;
+	cv::cvtColor(yuvFrame, dstImage, cv::COLOR_YUV420sp2RGB);
+	memcpy(RGB_BUF,(unsigned char*)dstImage.data,mBtnPhoto.mHeiht*mBtnPhoto.mWidth*3);
+	QImage image = QImage((unsigned char*)dstImage.data,dstImage.cols, dstImage.rows,dstImage.step,QImage::Format_RGB888);
         QImage scaledImage = image.copy(0, 88,mPicLab->width(), mPicLab->height());
         mPicLab->setPixmap(QPixmap::fromImage(scaledImage));
-		mPicLab->show();
+	mPicLab->show();
         mCapBtn->setText("OK");
     }else{
         startPreview();
-		mCapBtn->hide();
-		mReCapBtn->hide();
-		mPicLab->hide();
-		mInfoFrame->show();
+	mCapBtn->hide();
+	mReCapBtn->hide();
+	mPicLab->hide();
+	mInfoFrame->show();
         mCapBtn->setText("");
-		QImage image(RGB_BUF, mBtnPhoto.mWidth,  mBtnPhoto.mHeiht,QImage::Format_RGB888);
-		QImage scaledImage = image.copy(0, 88,mPicLab->width(), mPicLab->height());
-		QImage scaledImage2 = scaledImage.scaled(mFaceBtn->width(), mFaceBtn->height(), Qt::IgnoreAspectRatio);
-		mFaceBtn->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+	QImage image(RGB_BUF, mBtnPhoto.mWidth,  mBtnPhoto.mHeiht,QImage::Format_RGB888);
+	QImage scaledImage = image.copy(0, 88,mPicLab->width(), mPicLab->height());
+	QImage scaledImage2 = scaledImage.scaled(mFaceBtn->width(), mFaceBtn->height(), Qt::IgnoreAspectRatio);
+	mFaceBtn->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
         mFaceBtn->setPixmap(QPixmap::fromImage(scaledImage2));
     }
 }
@@ -328,14 +236,14 @@ void InfoEdit::reCapture()
     mIsCap = false ;
     mCapBtn->setText("") ;
     if (mIsStopPreview == false) {
-		mCapBtn->hide();
-		mReCapBtn->hide();
-		mInfoFrame->show();
-		mPicLab->hide();
-		QPixmap pmix;// = new QPixmap();
+	mCapBtn->hide();
+	mReCapBtn->hide();
+	mInfoFrame->show();
+	mPicLab->hide();
+	QPixmap pmix;// = new QPixmap();
         pmix.load(":/img/bg.png");
-		mFaceBtn->setPixmap(pmix);
-		mFaceBtn->setText(QString::fromUtf8("录入人脸")) ;
+	mFaceBtn->setPixmap(pmix);
+	mFaceBtn->setText(QString::fromUtf8("录入人脸")) ;
     } else {
         startPreview();
     }
@@ -373,8 +281,8 @@ void InfoEdit::getStrFromKey(QString word)
             mUserIDEdit->setText(str) ;
         }
     }
-
 }
+
 //鼠标点击事件，单击使键盘消失
 void InfoEdit::mousePressEvent(QMouseEvent *event)
 {
@@ -384,11 +292,11 @@ void InfoEdit::mousePressEvent(QMouseEvent *event)
        //mKeyFrame->hide();
        //qDebug()<<"DDDD" ;
    }
-
 }
 
 bool InfoEdit::eventFilter(QObject *obj, QEvent *e)
 {
+
     if(obj == mNameEdit || obj == mUserIDEdit)
     {
         if(e->type() == QEvent::MouseButtonPress)
@@ -412,8 +320,9 @@ bool InfoEdit::eventFilter(QObject *obj, QEvent *e)
 }
 
 void InfoEdit::startPreview() {
+
     mIsStopPreview = false;
-	mPicLab->hide();
+    mPicLab->hide();
 }
 
 void InfoEdit::stopPreview() {

@@ -143,29 +143,37 @@ QFrame#mInfoFrame{
 	border-radius:3px ;
 }
 
+QLabel#mNameLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
 QLineEdit#mNameEdit{
 	border:2px solid rgb(40, 147, 255) ;
 	border-radius:5px ;
-	font-size:25px ;
+	font-size:30px ;
 }
+
+QLabel#mUserIDLab{
+	color: rgb(0, 0,0) ;
+	font-size:30px;
+}
+
 QLineEdit#mUserIDEdit{
 	border:2px solid rgb(40, 147, 255) ;
 	border-radius:5px ;
-	font-size:25px ;
+	font-size:30px ;
 }
 
-
-QLabel#mLitleLab{
-	background-color:rgb(40, 147, 255) ;
-}
 
 QTableWidget{
 	background-color:white ;
 	gridline-color: rgb(239, 239, 239);
 	color:rgb(0,0,0);
-	font-size:25px ;
-	border:1px solid rgb(239, 239, 239);
+	font-size:30px ;
+	border:2px solid rgb(239, 239, 239);
 }
+
 QTableWidget::item:selected{
         background:rgba(255,255,255,1);    
 } 
@@ -192,44 +200,26 @@ QHeaderView::section:first
 	border-left:0px ;
 	border-top:0px ;
 }
+
 QHeaderView::section:last
 {
 	border-top:0px ;
 	border-left:0px ;
 }
+
 QHeaderView::section:middle
 {
 	border-top:0px ;
 	border-left:0px ;
 }
 
-
-
-QCheckBox#limtBox{
-	spacing: 10px;
-	font-size:24px ;
-}
-
-
-QCheckBox#limtBox::indicator{
-    width: 24px;
-    height: 24px;
-}
-
-QCheckBox#limtBox::indicator:unchecked{
-    image:url(:/img/unchoose.png);
-}
-
-QCheckBox#limtBox::indicator:checked{
-    image:url(:/img/choose.png);
-}
-QPushButton#mFaceBtn{
-	border:none ;
+QLabel#mFaceBtn{
 	background-color: rgba(136, 138, 133, 0.3);
-	border-radius:7px ;
+        border:2px solid rgb(40, 147, 255) ;
+	border-radius:5px ;
 	width:140px ;
 	height:160px ;
-	font-size:25px ;
+	font-size:30px ;
 }
 
 QFrame#mFaceInputFrame{
@@ -247,6 +237,7 @@ QPushButton#info_cap_btn{
 	background-color: rgb(215, 52, 52);
 	
 }
+
 QPushButton#info_back_btn{
 	width:60px ;
 	height:60px ;
@@ -256,10 +247,6 @@ QPushButton#info_back_btn{
 	background-color: rgba(198, 198, 198, 0);
 	font-size:25px ;
 }
-
-
-
-
 
 QLabel#lab_camera{
 	width:640px;

@@ -36,7 +36,6 @@ public:
 
 private slots:
     void backBtnClicked() ;
-    void checkBoxClicked(int id) ;
     void store() ;
     void capture() ;     //拍照保存
     void reCapture() ;    //重拍
@@ -61,10 +60,8 @@ private:
     QLabel* mUserIDLab ;
     QLineEdit* mNameEdit ;
     QLineEdit* mUserIDEdit ;
-    QLabel* mLitleLab ;
-    QLabel* mLimitsLab ;
     //QPushButton* mFaceBtn ;     //录入人脸按钮
-	customerqlabel* mFaceBtn;
+    customerqlabel* mFaceBtn;
 
     QFrame* mFaceInputFrame ;
     QLabel* mVideoLab ;
@@ -73,17 +70,14 @@ private:
     QPushButton* mReCapBtn ;
     bool mIsCap ;
     VIFrame mBtnPhoto ;
-	unsigned char *RGB_BUF;
-    QButtonGroup* mCheckBoxGroup ;
-    QMap<int, QString> mInfoMap;
+    unsigned char *RGB_BUF;
     bool mIsStopPreview = false;
 
     KeyBoard *mKeyBoard ;
     QString str1 ;
     QFrame* mKeyFrame ;
     void initUI() ;
-    void drawTable(QTableWidget* table, int Row) ;
-	void YVU420P_TO_RGB24(unsigned char *data, unsigned char *rgb, int width, int height);
+    void YVU420P_TO_RGB24(unsigned char *data, unsigned char *rgb, int width, int height);
 
 public:
     int mCurrentUserId = -1;

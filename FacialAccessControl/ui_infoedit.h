@@ -27,9 +27,6 @@ public:
         if (InfoEdit->objectName().isEmpty())
             InfoEdit->setObjectName(QString::fromUtf8("InfoEdit"));
         InfoEdit->resize(400, 300);
-        infotab = new QTableWidget(InfoEdit);
-        infotab->setObjectName(QString::fromUtf8("infotab"));
-        infotab->setGeometry(QRect(80, 40, 256, 192));
 
         retranslateUi(InfoEdit);
 

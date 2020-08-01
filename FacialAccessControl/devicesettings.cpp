@@ -42,7 +42,7 @@ void DeviceSettings::initUI()
     mBackBtn->setGeometry(40, 14, 60, 60) ;
     mSaveBtn = new QPushButton(mTitleFrame) ;
     mSaveBtn->setObjectName("mSaveBtn") ;
-    mSaveBtn->setGeometry(760, 14, 60, 60) ;
+    mSaveBtn->setGeometry(700, 14, 60, 60) ;
     mTitle = new QLabel(mTitleFrame) ;
     mTitle->setObjectName("mTitle") ;
     mTitle->setGeometry((800-144)/2, 24, 144, 36) ;
