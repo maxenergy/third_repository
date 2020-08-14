@@ -37,6 +37,8 @@ public:
     cv::Rect2f mRect;
     std::vector<cv::Point2f> mKeyPoints;
 	void **object;
+	void **object_ir;
+	int ir_length;
 	int mTrackID;
 	int tracking_flag;
 //    Rect<Point2F> mRect;

@@ -112,6 +112,8 @@ bool FaceDetect::facenetDetect(Msg &bob) {
 			FaceNetOut face;
 			face.mTrackID = box.mTrackID;
 			face.object = box.object;
+			face.object_ir = box.object_ir;
+			face.ir_length = box.ir_length;
 			face.mScore = box.mScore;
 			face.tracking_flag = box.tracking_flag;
 			memset(face.mFeatureMap,0,512*sizeof(float));

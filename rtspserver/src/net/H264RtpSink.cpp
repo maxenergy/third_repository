@@ -26,12 +26,21 @@ H264RtpSink::H264RtpSink(UsageEnvironment* env, MediaSource* mediaSource) :
 	
 	printf("mFps %d !!\n",mFps);
     start(1000/mFps);
+	width = 1920;
+	height = 1080;
 }
 
 H264RtpSink::~H264RtpSink()
 {
 
 }
+
+void H264RtpSink::SetPic_Size(int w,int h)
+{
+	width = w;
+	height =h;
+}
+
 
 std::string H264RtpSink::getMediaDescription(uint16_t port)
 {
@@ -55,7 +64,7 @@ std::string H264RtpSink::getAttribute()
 	sprintf(buf+strlen(buf),"a=control:trackID=0\r\n");
     sprintf(buf+strlen(buf),"a=rtpmap:%d H264/%d\r\n", mPayloadType, mClockRate);
 	sprintf(buf+strlen(buf),"a=fmtp:96 packetization-mode=1;profile-level-id=42002A;sprop-parameter-sets=Z0IAKpY1QPAET8s3AQEBAg==,aM4xsg==\r\n");
-	sprintf(buf+strlen(buf),"a=x-dimensions:1920,1080\r\n");
+	sprintf(buf+strlen(buf),"a=x-dimensions:%d,%d\r\n",width,height);
 	sprintf(buf+strlen(buf), "a=framerate:%d", mFps);
 
     return std::string(buf);

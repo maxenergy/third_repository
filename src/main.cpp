@@ -11,12 +11,26 @@ extern int sysinit(int *fd_out,int mroute,int mflip);
 extern void log_level_set(int level);
 extern void init_pola_sdk(int liveless_mode,float detect_threshold,int test_flag);
 extern  HI_VOID SAMPLE_COMM_VENC_RegCallback(VENC_CHN vencChn, SAMPLE_VENC_CALLBACK_S *callBack);
+#ifdef HAS_SIP_FEATURE
+extern int hisi_audio_open();
+#endif
 }
-
+extern unsigned int creat_venc_osd(int channel_id,int x,int y,int w,int h,unsigned int handle);
+extern void update_osd(unsigned int handle,char* bitmap_buf, int w,int h,char * ip_title);
 #define GPIO_IR_LED_IN      2
 #define GPIO_MIR_S0 		4
 #define GPIO_MIR_S1 		5
 #define GPIO_EB_ALARM       84
+
+#ifdef USEFOR_ENTRANCE_GUARD
+#define GPIO_DOOR_PORT       84
+#endif
+
+
+#ifdef HAS_SIP_FEATURE
+#define GPIO_SIP_BUTN       6
+#define GPIO_SPK_PA       83
+#endif
 
 #define DELAY_TIME_FOR_COUNT  3
 
@@ -79,11 +93,167 @@ void venc_h264_callback(unsigned char *ph264,int size)
 }
 
 
-void set_time()
+void venc_h264_callback_main(unsigned char *ph264,int size)
 {
-	//system("ntpclient -s -d -c 1 -i 5 -h 202.112.10.60");
-	//do nothing
+	unsigned char *data_buf;	
+	wdt_alive_flag = 1;
+
+	data_buf =(unsigned char *)malloc(size);
+	memcpy(data_buf,ph264,size);
+	rtpSink_main->push264(data_buf,size,(char *)NULL,0,0);
+	free(data_buf);
 }
+
+
+
+void sync_time()
+{
+	system("ntpclient -s -d -c 1 -i 5 -h pool.ntp.org");
+}
+
+#ifdef HAS_SIP_FEATURE
+/* Callback called by the library upon receiving incoming call */
+static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+			     pjsip_rx_data *rdata)
+{
+    pjsua_call_info ci;
+    PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(rdata);
+    pjsua_call_get_info(call_id, &ci);
+    PJ_LOG(1,("main.cpp", "Incoming call from %.*s!!",
+			 (int)ci.remote_info.slen,
+			 ci.remote_info.ptr));
+    /* Automatically answer incoming calls with 200/OK */
+    pjsua_call_answer(call_id, 200, NULL, NULL);
+	sip_call_state = ci.state;
+}
+
+/* Callback called by the library when call's state has changed */
+static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
+{
+    pjsua_call_info ci;
+    PJ_UNUSED_ARG(e);
+    pjsua_call_get_info(call_id, &ci);
+    PJ_LOG(1,("main.cpp", "Call %d state=%.*s", call_id,
+			 (int)ci.state_text.slen,
+			 ci.state_text.ptr));
+	sip_call_state = ci.state;
+}
+
+
+static void arrange_window(pjsua_vid_win_id wid)
+{
+    pjmedia_coord pos;
+    int i, last;
+
+    pos.x = 0;
+    pos.y = 10;
+    last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid;
+
+    for (i=0; i<last; ++i) {
+	pjsua_vid_win_info wi;
+	pj_status_t status;
+
+	status = pjsua_vid_win_get_info(i, &wi);
+	if (status != PJ_SUCCESS)
+	    continue;
+
+	if (wid == PJSUA_INVALID_ID)
+	    pjsua_vid_win_set_pos(i, &pos);
+
+	if (wi.show)
+	    pos.y += wi.size.h;
+    }
+
+    if (wid != PJSUA_INVALID_ID)
+	pjsua_vid_win_set_pos(wid, &pos);
+}
+
+
+/* General processing for media state. "mi" is the media index */
+static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
+                                        pj_bool_t *has_error)
+{
+    const char *status_name[] = {
+        "None",
+        "Active",
+        "Local hold",
+        "Remote hold",
+        "Error"
+    };
+
+    PJ_UNUSED_ARG(has_error);
+
+    pj_assert(ci->media[mi].status <= PJ_ARRAY_SIZE(status_name));
+    pj_assert(PJSUA_CALL_MEDIA_ERROR == 4);
+}
+
+/* Process video media state. "mi" is the media index. */
+static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
+                                pj_bool_t *has_error)
+{
+    if (ci->media_status != PJSUA_CALL_MEDIA_ACTIVE)
+	return;
+
+    arrange_window(ci->media[mi].stream.vid.win_in);
+
+    PJ_UNUSED_ARG(has_error);
+}
+
+
+/* Callback called by the library when call's media state has changed */
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    pjsua_call_info ci;
+    unsigned mi;
+    pj_bool_t has_error = PJ_FALSE;
+    pjsua_call_get_info(call_id, &ci);
+/*
+    if (ci.media_status == PJSUA_CALL_MEDIA_ACTIVE) {
+	// When media is active, connect call to sound device.
+	pjsua_conf_connect(ci.conf_slot, 0);
+	pjsua_conf_connect(0, ci.conf_slot);
+    }
+*/
+	//arrange_window
+     
+    pjsua_call_get_info(call_id, &ci);
+
+    for (mi=0; mi<ci.media_cnt; ++mi) {
+	on_call_generic_media_state(&ci, mi, &has_error);
+
+		switch (ci.media[mi].type) {
+		case PJMEDIA_TYPE_AUDIO:
+		    	pjsua_conf_connect(ci.conf_slot, 0);
+				pjsua_conf_connect(0, ci.conf_slot);
+		    break;
+		case PJMEDIA_TYPE_VIDEO:
+		 //   on_call_video_state(&ci, mi, &has_error);
+		    break;
+		default:
+		    /* Make gcc happy about enum not handled by switch/case */
+		    break;
+		}
+    }
+	
+	if (has_error) {
+	pj_str_t reason = pj_str("Media failed");
+	pjsua_call_hangup(call_id, 500, &reason, NULL);
+	}
+}
+void sip_setup()
+{
+	pjsua_callback cb;
+	system("echo 6 > /sys/class/gpio/export");
+	cb.on_incoming_call = &on_incoming_call;
+    cb.on_call_media_state = &on_call_media_state;
+	cb.on_call_state = &on_call_state;
+	sip_client_init(&cb,5060);
+	sip_client_register(&sip_acc_id,"1001","121.40.80.20","12345");
+	hisi_audio_open();
+}
+#endif
+
 
 #ifdef BUILD_SYSTEM_DEMO
 int ota_sw_ver = 1;
@@ -186,14 +356,17 @@ int main()
 	wdt_loop.detach();
 	checkota();
 	
-	set_time();
+	sync_time();
 
 	tcp_cmd = new Tcp_Cmd(TCP_CMD_PORT,update_face,tcp_ota_func);
 	int fd_sys;
 	std::cout << "pola sdk init!!! " << std::endl;
-	SAMPLE_VENC_CALLBACK_S callBack;
+	SAMPLE_VENC_CALLBACK_S callBack,callBack_main;
 	callBack.pfnDataCB = venc_h264_callback;
+	callBack_main.pfnDataCB = venc_h264_callback_main;
 	sysinit(&fd_sys,camroute,camflip);
+	creat_venc_osd(0,16,16,960,160,handle_main);
+	creat_venc_osd(2,16,16,960,160,handle_sub);
 #ifndef BUILD_FACTORY_TEST_APP
 	log_level_set(1);
 	init_pola_sdk(0,0.4,test_flag);
@@ -238,20 +411,41 @@ int main()
 
 	system_init_stoped = 1;
 
- //   Logger::setLogLevel(Logger::LogWarning);
+#ifdef HAS_SIP_FEATURE
+	sip_event_loop = std::thread(&sip_process_loop);
+	sip_event_loop.detach();
+#endif
+
+#ifdef USEFOR_ENTRANCE_GUARD
+	door_event_loop = std::thread(&door_process_loop);
+	door_event_loop.detach();
+#endif
+	
+
     EventScheduler* scheduler = EventScheduler::createNew(EventScheduler::POLLER_SELECT);
  
     ThreadPool* threadPool = ThreadPool::createNew(2);	
     env = UsageEnvironment::createNew(scheduler, threadPool);
      Ipv4Address ipAddr("0.0.0.0", 554);
       server = RtspServer::createNew(env, ipAddr);
-    session = MediaSession::createNew("live");
-    MediaSource* mediaSource = H264FileMediaSource::createNew(env, "pipe264");
-    rtpSink = H264RtpSink::createNew(env, mediaSource);
+    session = MediaSession::createNew("live");	
+    session_main = MediaSession::createNew("main");
+    MediaSource* mediaSource = H264FileMediaSource::createNew(env, "live");
+    MediaSource* mediaSource_main = H264FileMediaSource::createNew(env, "main");
+
+	rtpSink = H264RtpSink::createNew(env, mediaSource);
+	rtpSink_main = H264RtpSink::createNew(env, mediaSource_main);
+	rtpSink_main->SetPic_Size(1280,720);
     session->addRtpSink(MediaSession::TrackId0, rtpSink);
+	session_main->addRtpSink(MediaSession::TrackId0, rtpSink_main);
+
     server->addMeidaSession(session);
+	server->addMeidaSession(session_main);
+	
     server->start();
-	SAMPLE_COMM_VENC_RegCallback(SAMPLE_VENC_CHNID, &callBack);
+	
+	SAMPLE_COMM_VENC_RegCallback(0, &callBack_main);
+	SAMPLE_COMM_VENC_RegCallback(2, &callBack);
     printf("Play the media using the URL %s  ",server->getUrl(session).c_str());
     env->scheduler()->loop();
 #endif
@@ -267,8 +461,14 @@ void thread_qrcode_setup()
 	printf("qrcode thread started!\n");
 	while(1)
 	{
-		//sleep(1);
-		usleep(1000 * 50);
+		usleep(1000 * 500);
+		if(strlen(camera_ip_addr) <= 7){
+			update_osd(handle_main,bitmap_buf_main, 960, 160,camera_ip_addr_raw);
+			update_osd(handle_sub,bitmap_buf_sub, 960, 160,camera_ip_addr_raw);
+		}else{
+			update_osd(handle_main,bitmap_buf_main, 960, 160,camera_ip_addr);
+			update_osd(handle_sub,bitmap_buf_sub, 960, 160,camera_ip_addr);
+		}
 		VIFrame mBtnPhoto;
 		FaceRecognitionApi::getInstance().capture(QRCODE_PIC_CHN,mBtnPhoto);
 		cv::Mat yuvFrame = cv::Mat(mBtnPhoto.mHeiht*3/2, mBtnPhoto.mWidth, CV_8UC1, mBtnPhoto.mData);
@@ -306,6 +506,43 @@ void save_box(MtcnnInterface::Out list)
 	data_mutex.unlock();
 }
 
+#ifdef USEFOR_ENTRANCE_GUARD
+void open_door()
+{	
+	door_mutex.lock();
+	Door_state_count = 1;
+	door_mutex.unlock();
+}
+
+void door_setup(){
+	system("echo 84 > /sys/class/gpio/export");
+	system("echo \"out\" > /sys/class/gpio/gpio84/direction");
+	system("echo 0 > /sys/class/gpio/gpio84/value");
+}
+
+void door_process_loop()
+{
+	int but_state = 0;
+	int event = 0;
+	door_setup();
+	while(1){
+		usleep(500*1000);
+		door_mutex.lock();
+		if(Door_state_count > 0){
+			gpio_write(GPIO_DOOR_PORT,1);
+			printf("open door!");
+			Door_state_count++;
+			if(Door_state_count >= 10){
+				gpio_write(GPIO_DOOR_PORT,0);
+				printf("close door!");
+				Door_state_count = 0;
+			}
+		}
+		door_mutex.unlock();
+	}
+}
+#endif
+
 void eb_alarm(int status)
 {
 	gpio_write(GPIO_EB_ALARM,status);
@@ -325,7 +562,6 @@ void eliminate_dithering(int status)
 	
 	if(x_count >= DELAY_TIME_FOR_COUNT){
 	  if(last_status == 1){
-	    // prs485->ctl_relay(0,1);
 	    eb_alarm(1);
 	  }else{
 	  	eb_alarm(0);
@@ -345,7 +581,6 @@ void save_box_obj(ObjectDetectInterface::Out list)
      XDI[i].x1 = (unsigned char)(box.mBox[1]*255.f/1920.f);
 	 XDI[i].y1 = (unsigned char)(box.mBox[3]*255.f/1080.f);
 	 XDI[i].userid= htonl(box.obj_id);
-	// printf("box.mScore is %f \n",box.mScore);
 	 i++;
 	}
 	box_count_obj = i;
@@ -379,7 +614,6 @@ void save_pic(char* name)
 {
 	VIFrame mBtnPhoto;
 	char full_name[255];
-	//unsigned char* rgb_buf;
 	FaceRecognitionApi::getInstance().capture(OTA_PIC_CHN,mBtnPhoto);
 //	struct timeval start_time;
 //	struct timeval stop_time;
@@ -409,10 +643,11 @@ void print_timeinfo()
 	#endif
 }
 	
-#define MQTT_PING_TIME_PRESEC  50
+#define MQTT_PING_TIME_PRESEC  90
 
 void thread_aiot_setup()
 {
+	static int disconnect_count = 0;
 	int ret =0;
 	ret = Aiot_server->mqttc_init(mqtt_server_ip,mqtt_user, mqtt_passwd, mqtt_server_port, mqtt_user);
 	if(ret != MQTTC_CONNECTED){
@@ -426,6 +661,11 @@ void thread_aiot_setup()
 			Aiot_server->mqttc->sendping();
 		}else{			
 			printf("zq mattc is disconnect,try to reconnect!\n");
+			disconnect_count++;
+			if(disconnect_count > 50)
+			{
+				system("reboot");
+			}
 			Aiot_server->mqttc_reconnect();
 		}
 		print_timeinfo();
@@ -458,6 +698,59 @@ void thread_log_manager()
 		sleep(LOG_TIME_PRESEC);
 	}
 }
+
+#ifdef HAS_SIP_FEATURE
+void sip_event()
+{
+	static int button_state = SIP_BUTN_NO_CALL;
+	pj_status_t status;
+	if(button_state == SIP_BUTN_NO_CALL)
+	{
+		if((sip_call_state == PJSIP_INV_STATE_NULL)||(sip_call_state == PJSIP_INV_STATE_DISCONNECTED))
+		{
+			pj_str_t uri = pj_str("sip:1000@121.40.80.20;transport=tcp");
+			status = pjsua_call_make_call(sip_acc_id, &uri, 0, NULL, NULL, NULL);
+			if (status != PJ_SUCCESS){
+				printf("make sip call failed!\n");
+			}else{
+				printf("make call!!!\n");
+				button_state = SIP_BUTN_HAS_CALL;
+			}
+		}else{
+			button_state = SIP_BUTN_HAS_CALL;
+		}
+	}else{
+		if((sip_call_state == PJSIP_INV_STATE_CONFIRMED)||(sip_call_state == PJSIP_INV_STATE_CALLING))
+		{
+		  pjsua_call_hangup_all();
+		  button_state = SIP_BUTN_NO_CALL;
+		  printf("hangup !!!\n");
+		}else{
+		  button_state = SIP_BUTN_NO_CALL;
+		}
+	}
+}
+
+void sip_process_loop()
+{
+	int but_state = 0;
+	int event = 0;
+	static int last_state = 1;
+	sip_setup();
+	while(1){
+		usleep(100*1000);
+		but_state = gpio_read(GPIO_SIP_BUTN);
+		if(last_state != but_state)
+		{
+			if(but_state == 1)
+			{
+				sip_event();
+			}
+		}
+		last_state = but_state;
+	}
+}
+#endif
 
 void thread_ota_setup()
 {
@@ -633,11 +926,9 @@ void trigger_lift(int userid)
 		printf("find  userinfo error!\n");
 		return;
 	}
-	printf("info.floor is %d \n",info.floor);
+//entrance guard
 	prs485->ctl_sw(0,info.floor-1,1);
 	prs485->ctl_sw(0,0,1);
-	//prs485->ctl_sw(0,1,1);
-	//prs485->ctl_relay(0,onoff);
 }
 
 void update_iot(FaceDetect::Msg &bob)
@@ -680,10 +971,11 @@ void update_iot(FaceDetect::Msg &bob)
 				trigger_lift(item.userlist[j]);
 			}
 		}
+		
+		#ifdef USEFOR_ENTRANCE_GUARD
+		open_door();
+		#endif
 	}
-
-
-
 }
 
 void process_detectet(FaceDetect::Msg bob)
@@ -934,7 +1226,33 @@ void eth0_ifconfig()
 
 	/* set default gateway */
 	memset(ifcmd_buf,0,50);
-	sprintf(ifcmd_buf,"route add default gw %s", camera_ip_gateway);
+	if(strlen(camera_ip_gateway) <= 7)
+	{
+		char route_buf[50];
+		char temp_buf[50];
+		memset(temp_buf,0,50);
+		memset(route_buf,0,50);
+		int i = 0;
+		if(strlen(camera_ip_addr) <= 7){
+			memcpy(temp_buf,camera_ip_addr_raw,strlen(camera_ip_addr_raw));
+			i = strlen(camera_ip_addr_raw);
+		}else{
+			memcpy(temp_buf,camera_ip_addr,strlen(camera_ip_addr));
+			i = strlen(camera_ip_addr);
+		}
+		for(;i>=6;i--)
+		{
+			if(temp_buf[i] == '.')
+			{
+				break;
+				printf("");
+			}
+		}
+		memcpy(route_buf,temp_buf,i);
+		sprintf(ifcmd_buf,"route add default gw %s.1", route_buf);
+	}else{
+		sprintf(ifcmd_buf,"route add default gw %s", camera_ip_gateway);
+	}
 	system(ifcmd_buf);
 }
 
@@ -962,12 +1280,23 @@ void setup_env()
 	{
 		hw_addr[i] = ifreq.ifr_hwaddr.sa_data[i];
 	}
+
+	if (ioctl (sock, SIOCGIFADDR, &ifreq) < 0)
+	{
+		printf("setup env failed! eth0 device err!\n");
+		return;
+	}
+	struct sockaddr_in sin;
+	memset(camera_ip_addr_raw,0,MAX_PARAM_SIZE);
+    memcpy(&sin, &ifreq.ifr_addr, sizeof(sin));
+	sprintf(camera_ip_addr_raw,"%s",inet_ntoa(sin.sin_addr));
+	
 	memset(fixed_dev_sn,0,20);
 	sprintf(fixed_dev_sn,"%s_%x%x%x%x%x%x_%d",CUSTOM_ID,hw_addr[0],hw_addr[1], \
 		hw_addr[2],hw_addr[3],hw_addr[4],hw_addr[5],DEV_TYPE);
 
 	printf("fixed_dev_sn %s \n",fixed_dev_sn);
-	//close(sock);
+	close(sock);
 
 	if(access("InitConfig.ini", F_OK) == 0)
 	{
@@ -1347,14 +1676,14 @@ int save_DevConfig(const char *config_buffer)
     char QRdata[1024] = {0};
     char dev_config_data[1024] = {0};
     bool is_success;
-
+	int has_config = 0;
     minIni ini("InitConfig.ini");
 
     /* judgement the security level */
     if (!security_level)
     {
         printf("WARNING: This security level %d isn't allowed to set dev_config", security_level);
-	return 0;
+		return 0;
     }
 
 	if((config_buffer[0] == 'I')&&(config_buffer[1] == 'N')&&(config_buffer[2] == 'I')&&(config_buffer[3] == 'T')\
@@ -1411,7 +1740,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put MQTT mqtt_server_ip failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
 	        break;
             case 'B': /* MQTT server port */
                 tmp_value =atoi(Value);
@@ -1428,7 +1757,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put MQTT mqtt_server_port failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'C': /* MQTT Client ID as login username */
                 memset(mqtt_user,0,MAX_PARAM_SIZE);
@@ -1445,7 +1774,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put MQTT mqtt_user failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'D': /* MQTT client login password */
                 memset(mqtt_passwd,0,MAX_PARAM_SIZE);
@@ -1462,7 +1791,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put MQTT mqtt_passwd failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'E': /* FTP server IP address */
                 memset(ftp_serverip,0,MAX_PARAM_SIZE);
@@ -1479,7 +1808,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put FTP ftp_server_ip failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'F': /* FTP server port */
                 tmp_value =atoi(Value);
@@ -1496,7 +1825,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put FTP ftp_server_port failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'G': /* FTP login username */
                 memset(ftp_user,0,MAX_PARAM_SIZE);
@@ -1513,7 +1842,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put FTP ftp_user failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'H': /* FTP login password */
                 memset(ftp_passwd,0,MAX_PARAM_SIZE);
@@ -1530,7 +1859,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put FTP ftp_passwd failed.\n ");
                     return -1;
                 }
-
+                has_config = 1;
                 break;
             case 'I': /* camera IP address */
                 memset(camera_ip_addr,0,MAX_PARAM_SIZE);
@@ -1547,7 +1876,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put CAMERA camera_ip_addr failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'J': /* camera IP Network Mask */
                 memset(camera_ip_mask,0,MAX_PARAM_SIZE);
@@ -1564,7 +1893,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put CAMERA camera_ip_mask failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'K': /* camera IP Gateway */
                 memset(camera_ip_gateway,0,MAX_PARAM_SIZE);
@@ -1581,7 +1910,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("ERROR: ini.put CAMERA camera_ip_gateway failed.\n ");
                     return -1;
                 }
-
+				has_config = 1;
                 break;
             case 'L': /* camera route */
 		        tmp_value = atoi(Value);
@@ -1601,7 +1930,7 @@ int save_DevConfig(const char *config_buffer)
                     printf("error camera route value:%d \n",camroute);
                     return -1;
                 }
-
+				has_config = 1;
             case 'M': /* camera flip */
 		        tmp_value = atoi(Value);
                 if ((tmp_value==0)||(tmp_value==1))
@@ -1620,17 +1949,23 @@ int save_DevConfig(const char *config_buffer)
                     printf("error camera flip value:%d \n",camflip);
                     return -1;
                 }
-
+				has_config = 1;
             default:
                 printf("ERROR: this key %s key is doesn't be supported now.\n", temp);
                 return -1;
         }
     }
-	for(int p=0; p <= 10; p++)
+	if(has_config == 0)
 	{
-		set_ircut(1);
-		sleep(1)
-		set_ircut(0);
+		printf("no config changed! return!\n");
+		return -1;
+	}
+	for(int p=0; p <= 3; p++)
+	{
+		eb_alarm(1);
+		sleep(1);
+		eb_alarm(0);
+		sleep(1);
 	}
 	printf("device has configed,nned reboot!\n");
     system("reboot");

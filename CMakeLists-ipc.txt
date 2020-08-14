@@ -1,0 +1,214 @@
+PROJECT(AIPC)
+cmake_minimum_required(VERSION 2.8)
+
+SET(CMAKE_C_COMPILER "/media/alik/f54faace-0b8b-4347-99e8-abd0dfe48105/opt/arm-himix200-linux/bin/arm-himix200-linux-gcc")
+
+SET(CMAKE_CXX_COMPILER "/media/alik/f54faace-0b8b-4347-99e8-abd0dfe48105/opt/arm-himix200-linux/bin/arm-himix200-linux-g++")
+
+#export CC=arm-himix200-linux-gcc
+#export CXX=arm-himix200-linux-g++
+
+SET(BOARD_TYPE "IPC")
+
+SET(WM_BUILD_TYPE "Official")
+#SET(WM_BUILD_TYPE "factory")
+
+SET(WM_FEATURE_SIP "ON")
+#SET(WM_FEATURE_SIP "OFF")
+
+#SET(WM_FEATURE_DEBUG "ON")
+SET(WM_FEATURE_DEBUG "OFF")
+
+#SET(WM_FEATURE_ENTRANCE_GUARD "ON")
+SET(WM_FEATURE_ENTRANCE_GUARD "OFF")
+
+SET(WM_FEATURE_EB_DETECT "ON")
+#SET(WM_FEATURE_EB_DETECT "OFF")
+
+SET(SDK_VER "2v0")
+
+
+#ifdef USEFOR_ENTRANCE_GUARD
+
+if("${WM_FEATURE_DEBUG}" STREQUAL "ON")
+	SET(CMAKE_CXX_FLAGS  "-g -mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")
+else()
+	SET(CMAKE_CXX_FLAGS  "-mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")
+endif()
+#include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/business/facerecognition)
+if("${SDK_VER}" STREQUAL "1v0")
+	include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/sdk1v0/include)
+	SET(sdk_libpath ${CMAKE_SOURCE_DIR}/hihopesdk/libs/lib3516/lib/sdk1v0)
+else()
+	include_directories(${CMAKE_SOURCE_DIR}/hihopesdk/sdk2v0/include)
+	SET(sdk_libpath ${CMAKE_SOURCE_DIR}/hihopesdk/libs/lib3516/lib/sdk2v0)
+endif()
+
+
+
+if("${WM_FEATURE_ENTRANCE_GUARD}" STREQUAL "ON")
+	add_definitions(-DUSEFOR_ENTRANCE_GUARD)
+
+else()
+	if("${WM_FEATURE_EB_DETECT}" STREQUAL "ON")
+		add_definitions(-DZQ_DETECT_E-BICYCLE)
+	endif()
+endif()
+
+include_directories(${CMAKE_SOURCE_DIR}/rtspserver/src/)
+
+include_directories(${CMAKE_SOURCE_DIR}/tcp_cmd)
+include_directories(${CMAKE_SOURCE_DIR}/cloudserver/src)
+include_directories(${CMAKE_SOURCE_DIR}/cloudserver/mqtt_client/src)
+include_directories(${CMAKE_SOURCE_DIR}/rs485_port)
+include_directories(${CMAKE_SOURCE_DIR}/zbar/include)
+include_directories(${CMAKE_SOURCE_DIR}/minIni/dev)
+if("${WM_FEATURE_SIP}" STREQUAL "ON")
+	add_definitions(-DHAS_SIP_FEATURE)
+	add_definitions(-DHI_ACODEC_TYPE_INNER)
+	include_directories(${CMAKE_SOURCE_DIR}/sip-client/include)
+endif()
+add_definitions(-Darm)
+
+SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/out)
+
+
+#SET(CMAKE_C_COMPILER /media/alik/f54faace-0b8b-4347-99e8-abd0dfe48105/opt/arm-himix200-linux/bin/arm-himix200-linux-gcc)
+
+#SET(CMAKE_CXX_COMPILER /media/alik/f54faace-0b8b-4347-99e8-abd0dfe48105/opt/arm-himix200-linux/bin/arm-himix200-linux-g++)
+
+ADD_SUBDIRECTORY(hihopesdk)
+ADD_SUBDIRECTORY(rtspserver)
+ADD_SUBDIRECTORY(tcp_cmd)
+ADD_SUBDIRECTORY(cloudserver)
+ADD_SUBDIRECTORY(rs485_port)
+ADD_SUBDIRECTORY(minIni)
+
+link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/lib)
+link_directories(${sdk_libpath}/)
+link_directories(${PROJECT_SOURCE_DIR}/hihopesdk/libs/opencv/lib_arm)
+link_directories(${PROJECT_SOURCE_DIR}/zbar/lib)
+link_directories(${PROJECT_SOURCE_DIR}/minIni/build)
+if("${WM_FEATURE_SIP}" STREQUAL "ON")
+	link_directories(${PROJECT_SOURCE_DIR}/sip-client/lib)
+	link_directories(${PROJECT_SOURCE_DIR}/sip-client/ext_lib)
+
+
+	add_library(libpjlib-util  STATIC IMPORTED)
+	set_property(TARGET libpjlib-util  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjlib-util-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpj  STATIC IMPORTED)
+	set_property(TARGET libpj   PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpj-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjmedia    STATIC IMPORTED)
+	set_property(TARGET libpjmedia    PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjmedia-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjmedia-audiodev  STATIC IMPORTED)
+	set_property(TARGET libpjmedia-audiodev PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjmedia-audiodev-arm-himix200-linux-gnu.a)
+
+	add_library(libpjmedia-codec  STATIC IMPORTED)
+	set_property(TARGET libpjmedia-codec PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjmedia-codec-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjmedia-videodev  STATIC IMPORTED)
+	set_property(TARGET libpjmedia-videodev PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjmedia-videodev-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjnath   STATIC IMPORTED)
+	set_property(TARGET libpjnath  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjnath-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjsdp   STATIC IMPORTED)
+	set_property(TARGET libpjsdp  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjsdp-arm-himix200-linux-gnu.a)
+
+	add_library(libpjsip   STATIC IMPORTED)
+	set_property(TARGET libpjsip  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjsip-arm-himix200-linux-gnu.a)
+
+	add_library(libpjsip-simple   STATIC IMPORTED)
+	set_property(TARGET libpjsip-simple  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjsip-simple-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjsip-ua   STATIC IMPORTED)
+	set_property(TARGET libpjsip-ua  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjsip-ua-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjsua2   STATIC IMPORTED)
+	set_property(TARGET libpjsua2  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjsua2-arm-himix200-linux-gnu.a)
+
+
+	add_library(libpjsua  STATIC IMPORTED)
+	set_property(TARGET libpjsua  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/lib/libpjsua-arm-himix200-linux-gnu.a)
+
+
+	add_library(libg7221codec  STATIC IMPORTED)
+	set_property(TARGET libg7221codec  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libg7221codec-arm-himix200-linux-gnu.a)
+
+	add_library(libgsmcodec  STATIC IMPORTED)
+	set_property(TARGET libgsmcodec  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libgsmcodec-arm-himix200-linux-gnu.a)
+
+
+	add_library(libilbccodec  STATIC IMPORTED)
+	set_property(TARGET libilbccodec  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libilbccodec-arm-himix200-linux-gnu.a)
+
+
+	add_library(libresample  STATIC IMPORTED)
+	set_property(TARGET libresample  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libresample-arm-himix200-linux-gnu.a)
+
+
+	add_library(libspeex  STATIC IMPORTED)
+	set_property(TARGET libspeex  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libspeex-arm-himix200-linux-gnu.a)
+
+
+	add_library(libsrtp  STATIC IMPORTED)
+	set_property(TARGET libsrtp  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libsrtp-arm-himix200-linux-gnu.a)
+
+
+	add_library(libyuv  STATIC IMPORTED)
+	set_property(TARGET libyuv  PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/sip-client/ext_lib/libyuv-arm-himix200-linux-gnu.a)
+endif()
+
+if("${WM_BUILD_TYPE}" STREQUAL "factory")
+	message("factory BUILD ,only for camtest!")
+	add_definitions(-DBUILD_FACTORY_TEST_APP)
+	add_executable(aipc src/main.cpp)
+	target_link_libraries( aipc hihopesdk rtspserver cloudserver rs485 tcp_cmd minIni -ldl -lpthread)
+else()
+message("Official BUILD 2!")
+	if("${WM_FEATURE_SIP}" STREQUAL "ON")
+		add_definitions(-DPJ_M_ARMV4)
+		add_definitions(-DPJ_LINUX)
+		add_executable(aipc src/main.cpp src/sip_client.cpp)
+		target_link_libraries(aipc  libpjsua libpjsip-ua libpjsip libpjsip-simple  libpjsua2  libpjsdp libpjnath libpjmedia-audiodev  libpjmedia-codec libpjmedia-videodev libpjmedia libpjlib-util libpj libyuv hihopesdk libgsmcodec libspeex libilbccodec libsrtp libresample)
+		target_link_libraries( aipc rtspserver cloudserver rs485 tcp_cmd minIni -ldl -lpthread pola gomp)
+		target_link_libraries( aipc       hihopesdk)
+	else()
+		add_executable(aipc src/main.cpp)
+		target_link_libraries( aipc hihopesdk rtspserver cloudserver rs485 tcp_cmd minIni -ldl -lpthread pola gomp)
+	endif()
+endif()
+
+
+target_link_libraries(aipc 
+-lopencv_calib3d             
+-lopencv_core             
+-lopencv_features2d             
+-lopencv_flann             
+-lopencv_highgui             
+-lopencv_imgcodecs             
+-lopencv_imgproc             
+-lopencv_ml             
+-lopencv_objdetect             
+-lopencv_photo             
+-lopencv_shape             
+-lopencv_stitching             
+-lopencv_superres             
+-lopencv_videoio             
+-lopencv_video             
+-lopencv_videostab
+-lzbar
+)
+
+

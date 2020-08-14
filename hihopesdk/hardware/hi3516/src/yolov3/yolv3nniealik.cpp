@@ -459,7 +459,7 @@ static HI_S32 Hihope_Yolov3_GetResult_L(HI_S32 **pps32InputData,HI_U32 au32GridN
 				}
 */
 				// 13 x 13 x 85
-
+				// \D6\D8\D0\C2\C5\C5\C1\D0\C4ڴ\E6\CA\FD\BE\DD
 				for (h = 0; h < au32GridNumHeight[i]; h++)
 				{
 					for (w = 0; w < au32GridNumWidth[i]; w++)
@@ -668,7 +668,7 @@ void yolv3nniealikProcess(cv::Mat &image,ObjectDetectInterface::Out &out) {
  }
 
  for(int i =0; i<ret_buf_temp.ret_count; i++){
- 	if((ret_buf_temp.class_ret[i] == 1)&&(ret_buf_temp.score[i] > 0.5)){
+ 	if((ret_buf_temp.class_ret[i] == 1)&&(ret_buf_temp.score[i] > 0.6)){
 		 ObjectDetectOut item;
 		 sprintf(item.mName, "%s",	class_name[ret_buf_temp.class_ret[i]]);
 		 item.mBox[0] = ret_buf_temp.x0[i]*1920/416;
@@ -677,7 +677,11 @@ void yolv3nniealikProcess(cv::Mat &image,ObjectDetectInterface::Out &out) {
 		 item.mBox[3] = ret_buf_temp.y1[i]*1080/416;
 		 item.mScore = ret_buf_temp.score[i];
 		 item.obj_id = ret_buf_temp.class_ret[i] + 99000;
-		 out.mOutList.push_back(item);
+         if((item.mBox[2] <= 540)&&(item.mBox[3] <= 540)){
+		   printf("filter Distant objects!\n");
+		}else{
+		  out.mOutList.push_back(item);
+		}
  	}
  }
 

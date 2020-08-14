@@ -3261,7 +3261,7 @@ static HI_S32 SAMPLE_SVP_NNIE_Yolov3_SoftwareInit(SAMPLE_SVP_NNIE_CFG_S* pstCfg,
     pstSoftWareParam->u32OriImWidth = pstNnieParam->astSegData[0].astSrc[0].unShape.stWhc.u32Width;
     pstSoftWareParam->u32BboxNumEachGrid = 3;
 #ifdef ZQ_DETECT_YOLOV3
-	pstSoftWareParam->u32ClassNum = 4;
+	pstSoftWareParam->u32ClassNum = 3;
 	pstSoftWareParam->au32GridNumHeight[0] = 13;
 	pstSoftWareParam->au32GridNumHeight[1] = 26;
 	pstSoftWareParam->au32GridNumWidth[0] = 13;

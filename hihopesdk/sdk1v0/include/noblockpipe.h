@@ -18,7 +18,6 @@ public:
     T pop() {
         {
             std::unique_lock<std::mutex> locker(mMutex);
-            //std::cout << "mFifo pop:" << mFifo.size() << std::endl;
             if(mFifo.empty()) {
                 mCondEmpty.wait(mMutex, [&]{
                     return !mFifo.empty();

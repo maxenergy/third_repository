@@ -536,8 +536,16 @@ static HI_S32 Hihope_Yolov3_GetResult_L(HI_S32 **pps32InputData,HI_U32 au32GridN
         pf32Permute = (HI_FLOAT*)ps32TmpBuf;
         pstBbox = (SAMPLE_SVP_NNIE_YOLOV2_BBOX_S*)(pf32Permute+u32MaxBlobSize/sizeof(HI_S32));
         ps32AssistBuf = (HI_S32*)(pstBbox+u32TotalBboxNum);
+		//pps32InputData 输入矩阵
+		//au32GridNumWidth
+		//au32Stride 每一个blob 的stride
+		//af32Bias 3x3x2 预定义的 尺度数据
+		//Blob_num yolov3 是3 tinyyolov3 是2 可自定义
+		//pstBbox 输出box 内存已经分配好了
+		//u32BboxNum 有效的box 个数
         u32BboxNum = get_yolo_reslut(pps32InputData,au32GridNumWidth,au32Stride,(float *)af32Bias,Blob_num,pstBbox);
-        (void)SVP_NNIE_Yolo_NonRecursiveArgQuickSort((HI_S32*)pstBbox, 0, u32BboxNum - 1,
+
+		(void)SVP_NNIE_Yolo_NonRecursiveArgQuickSort((HI_S32*)pstBbox, 0, u32BboxNum - 1,
             sizeof(SAMPLE_SVP_NNIE_YOLOV3_BBOX_S)/sizeof(HI_U32),4,(SAMPLE_SVP_NNIE_STACK_S*)ps32AssistBuf);
 
         (void)SVP_NNIE_Yolov2_NonMaxSuppression(pstBbox, u32BboxNum, u32NmsThresh, sizeof(SAMPLE_SVP_NNIE_YOLOV3_BBOX_S)/sizeof(HI_U32));
@@ -568,7 +576,7 @@ static int Hihope_Yolov3_tiny_GetResult(SAMPLE_SVP_NNIE_PARAM_S*pstNnieParam,
     HI_U32 i = 0;
     HI_S32 *aps32InputBlob[3] = {0};
     HI_U32 au32Stride[3] = {0};
-
+// grid_num = 2
     for(i = 0; i < grid_num; i++)
     {
         aps32InputBlob[i] = (HI_S32*)pstNnieParam->astSegData[0].astDst[i].u64VirAddr;

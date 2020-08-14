@@ -9,6 +9,8 @@ class FaceNetOut {
 public:
     float mFeatureMap[512];
 	void** object;
+	void** object_ir;
+	int ir_length;
 	int mTrackID;
 	float mScore;
 	int tracking_flag;

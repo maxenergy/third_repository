@@ -12,8 +12,8 @@ find_package(Qt4 4.8.6 REQUIRED QtCore QtGui QtXml QtNetwork)
 
 SET(BOARD_TYPE "LCDBOARD")
 #SET(BOARD_TYPE "IPC")
-#SET(WM_BUILD_TYPE "Official")
-SET(WM_BUILD_TYPE "factory")
+SET(WM_BUILD_TYPE "Official")
+#SET(WM_BUILD_TYPE "factory")
 SET(SDK_VER "1v0")
 
 SET(CMAKE_CXX_FLAGS  "-g -mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -fPIC")

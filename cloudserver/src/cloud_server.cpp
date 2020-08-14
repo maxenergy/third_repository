@@ -111,16 +111,19 @@ int cloud_server::ota_mqttc_reconnect()
 
 
 
-#define FILTER_SECOND 30
+#define FILTER_SECOND 60
 void cloud_server::check_timeout(up_event &c_event)
 {
 	bool time_out=true;
 	int list_size = 0;
 	//remove time out mark
 	list_size = mark_list.size();
+	int delta_min;
+	int delta_sec;
 	for(int i =0;i<list_size;i++)
 	{
-		uevent_mark item = mark_list.front();	
+		uevent_mark item = mark_list.front();
+#if 0
 		if((item.min ==  c_event.min) \
 		/*	&&(item.timest.tm_mday ==  t->tm_mday) \
 			&&(item.timest.tm_hour ==  t->tm_hour) \
@@ -132,6 +135,19 @@ void cloud_server::check_timeout(up_event &c_event)
 				time_out = false;
 			}
 		}
+#else			
+		if(c_event.min >= item.min){
+			if(((c_event.min - item.min)*60 + c_event.sec - item.sec) < FILTER_SECOND){
+					time_out = false;
+				}
+		}else{
+			if(c_event.min + 60 - item.min < 2)
+			{
+				time_out = false;
+			}
+		}
+#endif
+		
 		if(time_out){
 			mark_list.pop_front();			
 			printf("time_out  ! id %d sec %d \n",item.userid,item.sec);

@@ -190,8 +190,8 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 
 
 
-		astVpssChnAttr[VpssChn2].u32Width				   = 960;
-		astVpssChnAttr[VpssChn2].u32Height				   = 540;
+		astVpssChnAttr[VpssChn2].u32Width				   = 352;
+		astVpssChnAttr[VpssChn2].u32Height				   = 288;
 		astVpssChnAttr[VpssChn2].enChnMode				   = VPSS_CHN_MODE_USER;
 		astVpssChnAttr[VpssChn2].enCompressMode			   = enCompressMode;
 		astVpssChnAttr[VpssChn2].enDynamicRange			   = enDynamicRange;
@@ -221,11 +221,33 @@ static HI_S32 start_vi(HI_U32 *busid,HI_U32 *devid)
 		    SAMPLE_PRT("vi bind vpss failed. s32Ret: 0x%x !\n", s32Ret);
 		    return -1;
 		}
-	
     return s32Ret;
 }
 
-static HI_S32 start_venc(HI_U32 chnid)
+
+static HI_S32 creat_ext_vpass(int src_chn,int ext_channel_id,unsigned int width_out,unsigned int height_out)
+{
+	int ext_chn = VPSS_MAX_PHY_CHN_NUM + ext_channel_id;	
+	VPSS_GRP		   VpssGrp		  = 0;
+	
+	VPSS_EXT_CHN_ATTR_S stExtChnAttr;
+	HI_S32 s32Ret;
+	stExtChnAttr.s32BindChn = src_chn;
+	stExtChnAttr.u32Width = width_out;
+	stExtChnAttr.u32Height = height_out;
+	stExtChnAttr.enDynamicRange = DYNAMIC_RANGE_SDR8;
+	stExtChnAttr.enCompressMode = COMPRESS_MODE_NONE;
+	stExtChnAttr.enVideoFormat = VIDEO_FORMAT_LINEAR;
+	stExtChnAttr.enPixelFormat = PIXEL_FORMAT_YVU_SEMIPLANAR_420;
+	stExtChnAttr.stFrameRate.s32SrcFrameRate = 30;
+	stExtChnAttr.stFrameRate.s32DstFrameRate = 25;
+	stExtChnAttr.u32Depth = 1;
+	s32Ret = HI_MPI_VPSS_SetExtChnAttr(VpssGrp, ext_chn, &stExtChnAttr);
+	HI_MPI_VPSS_EnableChn(VpssGrp,ext_chn);
+	return s32Ret;
+}
+
+static HI_S32 start_venc(HI_U32 chnid_0,HI_U32 chnid_1,HI_U32 chnid_2)
 {
     HI_S32 s32Ret = HI_SUCCESS;
 
@@ -235,33 +257,48 @@ static HI_S32 start_venc(HI_U32 chnid)
     /* config venc */
 	PIC_SIZE_E enSize;
 	PAYLOAD_TYPE_E enType = PT_H264;
-	SAMPLE_RC_E enRcMode = SAMPLE_RC_VBR;
+	SAMPLE_RC_E enRcMode = SAMPLE_RC_CBR;
 	HI_U32  u32Profile = 0;
 	HI_BOOL bRcnRefShareBuf = HI_TRUE;
 	stGopAttr.enGopMode = VENC_GOPMODE_NORMALP;
 	stGopAttr.stNormalP.s32IPQpDelta = 2;
-    SAMPLE_PRT("stGopAttr.stNormalP.s32IPQpDelta[%d]\n", stGopAttr.stNormalP.s32IPQpDelta);
-
+    SAMPLE_PRT("stGopAttr.stNormalP.s32IPQpDelta[%d] \n", stGopAttr.stNormalP.s32IPQpDelta);
 	SAMPLE_COMM_VI_GetSizeBySensor(stViConfig.astViInfo[0].stSnsInfo.enSnsType, &enSize);
-
     /*start venc*/
-    s32Ret = SAMPLE_COMM_VENC_Start(chnid, enType,  enSize, enRcMode, u32Profile, bRcnRefShareBuf, &stGopAttr);
+    s32Ret = SAMPLE_COMM_VENC_Start(chnid_0, enType,  enSize, enRcMode, u32Profile, bRcnRefShareBuf, &stGopAttr);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid, s32Ret);
+        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid_0, s32Ret);
         return s32Ret;
     }
-	VENC_CHN VeChn[1] = { chnid };
-	HI_S32 s32Cnt = 1;
+	
+#ifdef HAS_SIP_FEATURE
+    /*start venc*/
+	enSize = PIC_CIF;
+    s32Ret = SAMPLE_COMM_VENC_Start(chnid_1, enType,  enSize, enRcMode, u32Profile, bRcnRefShareBuf, &stGopAttr);
+	if (HI_SUCCESS != s32Ret)
+    {
+        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid_1, s32Ret);
+        return s32Ret;
+    }
+	VENC_CHN VeChn[3] = {chnid_0,chnid_1,chnid_2};
+	HI_S32 s32Cnt = 3;
+#else
+	VENC_CHN VeChn[2] = {chnid_0,chnid_2};
+	HI_S32 s32Cnt = 2;
+#endif
 	SAMPLE_VENC_PROCFRAME_MODE_E mode = VENC_PROCFRAME_TO_CALLBACK;
+
+	enSize = PIC_720P;
+    s32Ret = SAMPLE_COMM_VENC_Start(chnid_2, enType,  enSize, enRcMode, u32Profile, bRcnRefShareBuf, &stGopAttr);
+
 
 	s32Ret = SAMPLE_COMM_VENC_StartGetStream(VeChn, s32Cnt, mode);
     if (HI_SUCCESS != s32Ret)
     {
-        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid, s32Ret);
+        SAMPLE_PRT("SAMPLE_COMM_VENC_Start[%d] failed.s32Ret:0x%x !\n", chnid_0, s32Ret);
         return s32Ret;
     }
-
     return s32Ret;
 }
 
@@ -348,12 +385,21 @@ int sysinit(int *fd_out,int mroute,int mflip)
 	start_vi(busid,devid);
 	#ifdef BUILD_SDK2V0
 	scence_param_create("/home/param");
-	#else	
+	#else
 	cam_turing();
     #endif
-    s32Ret = start_venc(SAMPLE_VENC_CHNID);
+
+	creat_ext_vpass(0,0,1920,1080);
+	creat_ext_vpass(0,1,1280,720);
+	
+    s32Ret = start_venc(0,1,2);
+	
 	SAMPLE_COMM_VPSS_Bind_VENC(0,
-		0, SAMPLE_VENC_CHNID);
+		3, 0);
+	SAMPLE_COMM_VPSS_Bind_VENC(0,
+		2, 1);
+	SAMPLE_COMM_VPSS_Bind_VENC(0,
+		4, 2);
 
     return (s32Ret);
 }

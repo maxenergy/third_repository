@@ -38,6 +38,14 @@
 #include <sys/time.h>
 #include "zbar.h" 
 #include <vector>
+#ifdef HAS_SIP_FEATURE
+#include <pjsua-lib/pjsua.h>
+extern int sip_client_init(pjsua_callback *cb,int port);
+extern int sip_client_register(pjsua_acc_id *acc_id,char* user,char* domain,char* passwd);
+#define SIP_BUTN_NO_CALL  0
+#define SIP_BUTN_HAS_CALL  1
+#endif
+
 
 #define OTA_PIC_CHN   1  //416 x 416
 #define QRCODE_PIC_CHN  2  // 960 x 540
@@ -126,51 +134,59 @@ enum param_index{
 	PARAM_INDEX_SW_VER,
 	PARAM_INDEX_HW_VER
 };
-
 #define MAX_PARAM_SIZE 20
-
 char fixed_dev_sn[MAX_PARAM_SIZE];
-
 char mqtt_uptopic[MAX_PARAM_SIZE];
 char mqtt_downtopic[MAX_PARAM_SIZE];
-
 char ftp_serverip[MAX_PARAM_SIZE];
 int ftp_server_port;
 char ftp_user[MAX_PARAM_SIZE];
 char ftp_passwd[MAX_PARAM_SIZE];
-
 char  mqtt_server_ip[MAX_PARAM_SIZE];
 int  mqtt_server_port;
 char  mqtt_user[MAX_PARAM_SIZE];
 char  mqtt_passwd[MAX_PARAM_SIZE];
-
 char ota_mqtt_downtopic[MAX_PARAM_SIZE];
-
 char ota_mqtt_server_ip[MAX_PARAM_SIZE];
 int ota_mqtt_server_port;
 char ota_mqtt_user[MAX_PARAM_SIZE];
 char ota_mqtt_passwd[MAX_PARAM_SIZE];
-
 char ota_ftp_serverip[MAX_PARAM_SIZE];
 int ota_ftp_server_port;
 char ota_ftp_user[MAX_PARAM_SIZE];
 char ota_ftp_passwd[MAX_PARAM_SIZE];
-
 char camera_ip_addr[MAX_PARAM_SIZE];
+char camera_ip_addr_raw[MAX_PARAM_SIZE];
 char camera_ip_mask[MAX_PARAM_SIZE];
 char camera_ip_gateway[MAX_PARAM_SIZE];
-
 char g_device_sn[MAX_PARAM_SIZE];
-
-uint8_t sw_ver = 0x8;
-
-uint8_t hw_ver = 0x2;
-
+uint8_t sw_ver = 0xa;
+#ifdef USEFOR_ENTRANCE_GUARD
+	#ifdef HAS_SIP_FEATURE
+		uint8_t hw_ver = 0x5;
+	#else	
+		uint8_t hw_ver = 0x3;
+	#endif
+#else 
+	#ifdef ZQ_DETECT_E-BICYCLE
+		#ifdef HAS_SIP_FEATURE
+			uint8_t hw_ver = 0x4;
+		#else
+			uint8_t hw_ver = 0x2;
+		#endif
+	#else
+		uint8_t hw_ver = 0x1;
+	#endif
+#endif
 std::mutex data_mutex;
 FaceRecognitionApi *framework;
 
 UsageEnvironment* env;
 RtspServer* server;
+
+MediaSession* session_main;
+RtpSink* rtpSink_main;
+
 MediaSession* session;
 RtpSink* rtpSink;
 AI_Box FRI[32];
@@ -191,38 +207,41 @@ int last_min = 0;
 int current_sec = 0;
 int current_min = 0;
 int wdt_alive_flag = 0;
+unsigned handle_main = 0;
+char* bitmap_buf_main = 0;
+unsigned handle_sub = 1;
+char* bitmap_buf_sub = 0;
+
 
 int camroute = 0;
 int camflip = 0;
-int test_flag;
+int test_flag = 0;
 int system_init_stoped =0;
 rs485_port *prs485;
-
 std::mutex mFifo_Mutex;
-
 std::list<Save_file*> save_file_fifo;
-
 std::thread save_file_loop;
-
 std::thread aiot_setup_once;
-
 std::thread ir_cut_thread;
-
 std::thread wdt_loop;
-
 std::thread log_manager_loop;
-
-
 std::thread ota_setup_once;
-
 std::thread qrcode_loop;
+#ifdef HAS_SIP_FEATURE
+std::thread sip_event_loop;
+int sip_call_state =PJSIP_INV_STATE_NULL;
+pjsua_acc_id sip_acc_id;
+#endif
+
+#ifdef USEFOR_ENTRANCE_GUARD
+std::thread door_event_loop;
+int Door_state_count = 0;
+std::mutex door_mutex;
+#endif
 
 int security_level = FOR_ALL_CONFIG;
-
 void thread_ota_setup();
-
 void thread_ircut();
-
 void checkota();
 void setup_env();
 void register_sig();
@@ -241,5 +260,12 @@ void thread_log_manager();
 void process_xdetectet(FaceDetect::Msg bob);
 bool scan_image(cv::Mat &img_in);
 void gpio_write(int gpio,int on_off);
+#ifdef HAS_SIP_FEATURE
+void sip_process_loop();
+#endif
+#ifdef USEFOR_ENTRANCE_GUARD
+void door_process_loop();
+#endif
+int gpio_read(int gpio_id);
 
 

@@ -34,7 +34,7 @@ extern "C" {
 #define SAMPLE_SVP_NNIE_YOLOV3_EACH_GRID_BIAS_NUM 6 /*yolov3 bias num of each grid*/
 
 #ifdef ZQ_DETECT_YOLOV3
-#define SAMPLE_SVP_NNIE_YOLOV3_EACH_BBOX_INFER_RESULT_NUM   9
+#define SAMPLE_SVP_NNIE_YOLOV3_EACH_BBOX_INFER_RESULT_NUM   8
 #else
 #define SAMPLE_SVP_NNIE_YOLOV3_EACH_BBOX_INFER_RESULT_NUM   85 /*yolov3 inference result num of each bbox*/
 #endif

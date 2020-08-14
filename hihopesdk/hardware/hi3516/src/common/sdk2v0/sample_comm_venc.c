@@ -607,7 +607,7 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
     HI_U32                 u32Gop = 30;
     VENC_PARAM_MOD_S stVencModPara;
     s32Ret = memset_s(&stVencModPara, sizeof(VENC_PARAM_MOD_S), 0, sizeof(VENC_PARAM_MOD_S));
-
+	printf("SAMPLE_COMM_VENC_Creat !\n");
 #if 1
 		stVencModPara.enVencModType = MODTYPE_H264E;
 		s32Ret = HI_MPI_VENC_GetModParam(&stVencModPara);
@@ -652,7 +652,7 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
     stVencChnAttr.stVencAttr.u32BufSize      = stPicSize.u32Width * stPicSize.u32Height * 2;/*stream buffer size*/
     stVencChnAttr.stVencAttr.u32Profile      = u32Profile;
     stVencChnAttr.stVencAttr.bByFrame        = HI_FALSE;/*get stream mode is slice mode or frame mode?*/
-	printf("tream mode is slice mode");
+	printf("tream222 mode is slice mode sdk2v0 22\n");
     if(VENC_GOPMODE_SMARTP == pstGopAttr->enGopMode)
     {
         u32StatTime = pstGopAttr->stSmartP.u32BgInterval/u32Gop;
@@ -902,7 +902,10 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
                 stH264Cbr.u32SrcFrameRate       = u32FrameRate; /* input (vi) frame rate */
                 stH264Cbr.fr32DstFrameRate      = u32FrameRate; /* target frame rate */
                 switch (enSize)
-                {
+                {   
+                    case PIC_CIF:
+                        stH264Cbr.u32BitRate         = 1024 * 1 + 1024*u32FrameRate/30;
+                        break;
                     case PIC_720P:
                         stH264Cbr.u32BitRate         = 1024 * 3 + 1024*u32FrameRate/30;
                         break;
@@ -952,6 +955,11 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
                 stH264Vbr.fr32DstFrameRate = u32FrameRate;
                 switch (enSize)
                 {
+                	case PIC_CIF:
+                        stH264Vbr.u32MaxBitRate         = 1024 * 1 + 1024*u32FrameRate/30;						
+						stH264Vbr.fr32DstFrameRate = 15;
+						printf("fr32DstFrameRate change form %d -> 15 !\n",u32FrameRate);
+                        break;
                     case PIC_360P:
                         stH264Vbr.u32MaxBitRate = 1024 * 2   + 1024*u32FrameRate/30;
                         break;
@@ -960,6 +968,7 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
                         break;
                     case PIC_1080P:
                         stH264Vbr.u32MaxBitRate = 1024 * 2  + 2048*u32FrameRate/30;
+						stH264Vbr.fr32DstFrameRate = 20;
 						printf("u32MaxBitRate is 4M!\n");
                         break;
                     case PIC_2592x1944:
@@ -991,6 +1000,9 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
                 stH264AVbr.fr32DstFrameRate = u32FrameRate;
                 switch (enSize)
                 {
+                	case PIC_CIF:
+                        stH264AVbr.u32MaxBitRate         = 1024 * 2 + 1024*u32FrameRate/30;
+                        break;
                     case PIC_360P:
                         stH264AVbr.u32MaxBitRate = 1024 * 2   + 1024*u32FrameRate/30;
                         break;
@@ -1029,6 +1041,9 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
                 stH264QVbr.fr32DstFrameRate = u32FrameRate;
                 switch (enSize)
                 {
+                	case PIC_CIF:
+                        stH264QVbr.u32TargetBitRate         = 1024 * 2 + 1024*u32FrameRate/30;
+                        break;
                     case PIC_360P:
                         stH264QVbr.u32TargetBitRate = 1024 * 2   + 1024*u32FrameRate/30;
                         break;
@@ -1069,6 +1084,11 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
                 stH264CVbr.u32ShortTermStatTime = u32StatTime;
                 switch (enSize)
                 {
+                	case PIC_CIF:
+                        stH264CVbr.u32MaxBitRate         = 1024 * 1 + 1024*u32FrameRate/30;
+                        stH264CVbr.u32LongTermMaxBitrate = 1024 * 1 + 1024*u32FrameRate/30;
+                        stH264CVbr.u32LongTermMinBitrate = 512;
+                        break;
                     case PIC_720P:
                         stH264CVbr.u32MaxBitRate         = 1024 * 3 + 1024*u32FrameRate/30;
                         stH264CVbr.u32LongTermMaxBitrate = 1024 * 2 + 1024*u32FrameRate/30;
@@ -1282,7 +1302,7 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
 #if 0
 		VENC_H264_SLICE_SPLIT_S h264_split;
 		h264_split.bSplitEnable = HI_TRUE;
-		h264_split.u32MbLineNum = 20;
+		h264_split.u32MbLineNum = 10;
 		HI_MPI_VENC_SetH264SliceSplit(VencChn,&h264_split);
 #endif
 
@@ -1315,7 +1335,7 @@ HI_S32 SAMPLE_COMM_VENC_Start(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
 {
     HI_S32 s32Ret;
     VENC_RECV_PIC_PARAM_S  stRecvParam;
-
+	printf("SAMPLE_COMM_VENC_Start !\n");
     /******************************************
      step 1:  Creat Encode Chnl
     ******************************************/
@@ -2009,7 +2029,6 @@ HI_S32 SAMPLE_COMM_VENC_QpmapSendFrame(VPSS_GRP VpssGrp,VPSS_CHN VpssChn,VENC_CH
 
     return pthread_create(&gs_VencQpmapPid, 0, SAMPLE_COMM_QpmapSendFrameProc, (HI_VOID*)&stQpMapSendFramePara);
 }
-
 
 
 /******************************************************************************

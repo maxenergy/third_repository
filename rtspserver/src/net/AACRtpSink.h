@@ -13,6 +13,7 @@ public:
     AACRtpSink(UsageEnvironment* env, MediaSource* mediaSource, int payloadType);
     virtual ~AACRtpSink();
     virtual void push264(uint8_t* frame_h264,int size,char* ext_data,int exlen,unsigned int timestamp);
+	virtual void SetPic_Size(int w,int h);
     virtual std::string getMediaDescription(uint16_t port);
     virtual std::string getAttribute();
 

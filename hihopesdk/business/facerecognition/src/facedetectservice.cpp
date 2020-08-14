@@ -94,8 +94,9 @@ void FaceDetectService::stop() {
 void FaceDetectService::cameraReadLoop() {
     Frame frame;
 #ifdef BUILD_FACTORY_TEST_APP
-	usleep(1000*10);
+	usleep(1000*20);
 #endif
+	usleep(10*1000);
 	if(mPipe.size() <= 2){
 #ifdef IR_CAMERA
     	mCamera_IR->read(frame.mRawdata,frame.IR_mRawdata);
@@ -115,12 +116,6 @@ void FaceDetectService::cameraReadLoop() {
 		{
 			Frame frame_cpy;
 			mCamera->read(1,frame_cpy.mRawdata);
-			//printf("read pic %d %d \n",frame_cpy.mRawdata.mHeiht,frame_cpy.mRawdata.mWidth);
-			//frame_cpy.mRawdata.mHeiht = frame.mRawdata.mHeiht;
-			//frame_cpy.mRawdata.mWidth= frame.mRawdata.mWidth;
-			//frame_cpy.mRawdata.mSize = frame.mRawdata.mSize;
-			//frame_cpy.mRawdata.mFormat = frame.mRawdata.mFormat;
-			//frame_cpy.mRawdata.mData =(unsigned char *)malloc(frame_cpy.mRawdata.mSize);
 			mPipe_obj.push(frame_cpy);
 		}
 			
@@ -135,12 +130,12 @@ void FaceDetectService::trigger_frg(MtcnnInterface::Out mtcnn_out)
 
 void FaceDetectService::faceDetectLoop(int device) {
     FaceDetect::Msg bob;
+	usleep(10*1000);
     bob.mFrame = mPipe.pop();
     mFaceRecognition->detect(bob);
     if (mPreviewCallback != nullptr) {
         mPreviewCallback(bob);
     }
-		
 	bob.mFrame.mRawdata.release();
 #ifdef IR_CAMERA
 	bob.mFrame.IR_mRawdata.release();
@@ -151,6 +146,7 @@ void FaceDetectService::faceRecognitionLoop(int device) {
     FaceDetect::Msg bob;
     bob.mMtcnnInterfaceOut = mPipe_frg.pop();
     bob.mFacenetDeviceCoreId = device;
+	usleep(10*1000);
     mFaceRecognition->facenetDetect(bob);
     if(mRecognitionCallback != nullptr) {
         mRecognitionCallback(bob);
@@ -160,6 +156,7 @@ void FaceDetectService::faceRecognitionLoop(int device) {
 void FaceDetectService::XDetectLoop(int device)
 {
 	FaceDetect::Msg bob;
+	usleep(10*1000);
 	bob.mFrame = mPipe_obj.pop();
     mFaceRecognition->objdetect(bob);
 	bob.mFrame.mRawdata.release();

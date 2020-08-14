@@ -661,7 +661,7 @@ HI_S32 SAMPLE_COMM_VENC_Creat(VENC_CHN VencChn, PAYLOAD_TYPE_E enType,  PIC_SIZE
     stVencChnAttr.stVencAttr.u32BufSize      = stPicSize.u32Width * stPicSize.u32Height * 2;/*stream buffer size*/
     stVencChnAttr.stVencAttr.u32Profile      = u32Profile;
     stVencChnAttr.stVencAttr.bByFrame        = HI_FALSE;/*get stream mode is slice mode or frame mode?*/
-	printf("tream mode is slice mode");
+	printf("tream mode is slice mode sdk1v0 \n");
     if(VENC_GOPMODE_SMARTP == pstGopAttr->enGopMode)
     {
         u32StatTime = pstGopAttr->stSmartP.u32BgInterval/u32Gop;

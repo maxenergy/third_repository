@@ -87,6 +87,7 @@ bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) 
     A::Pola_Object *rgb_obj ,*ir_obj;
     int length,irLength;
 	A::ERROR_CODE ret_code;
+	int ir_mode =0;
 
 	if(!frame.mFrameData.empty()){
 		ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mFrameData.data, frame.mFrameData.cols, frame.mFrameData.rows, &rgb_obj, &length);
@@ -95,9 +96,12 @@ bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) 
 		if(frame.mRawdata.mFormat == VIFrame::PixelFormat::BGR)
 			ret_code = A::face_detect(A::ImageType::RGB,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
 		else
-			ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
-		  //  ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.IR_mRawdata.mData, frame.IR_mRawdata.mWidth, frame.IR_mRawdata.mHeiht, &ir_obj, &irLength);
-	}
+			 ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.mRawdata.mData, frame.mRawdata.mWidth, frame.mRawdata.mHeiht, &rgb_obj, &length);
+			if(!frame.mRawdata.empty()){
+			 ir_mode = 1;
+		     ret_code = A::face_detect(A::ImageType::YUV,(const char *)frame.IR_mRawdata.mData, frame.IR_mRawdata.mWidth, frame.IR_mRawdata.mHeiht, &ir_obj, &irLength);
+			}
+		}
 
 	int t_id[length];
     ret_code = A::face_track(rgb_obj,length,t_id);
@@ -110,6 +114,13 @@ bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) 
 			o.mRect = cv::Rect2f(cv::Point2f(rect.left, rect.top), cv::Point2f(rect.right, rect.bottom));
 			o.mTrackID = t_id[i];
 			o.object = rgb_obj;
+			if(ir_mode == 1){
+				o.object_ir = ir_obj;
+				o.ir_length = irLength;
+			}else{
+				o.object_ir = NULL;
+				o.ir_length = 0;
+			}
 			o.mUserID = -1;
 			out.mOutList.push_back(o);
 		}
@@ -124,7 +135,9 @@ bool MtcnnDummyImpl::detect(int device, Frame &frame, MtcnnInterface::Out &out) 
 bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out) {	
 	A::ERROR_CODE ret_code;
 	int face_lenth = 0;
+	int ir_lenth = 0;
 	int i = 0;
+	int ir_mode = 0;
 #ifdef ADD_FACE_NO_LIVENESSCHECK
 	int igrore =0;
 #endif
@@ -133,11 +146,24 @@ bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out
         }
 	
     A::Pola_Object *rgb_obj;
+	A::Pola_Object *ir_obj;
+	if(out.mOutList.size() > 0)
+	{
+		rgb_obj = (A::Pola_Object *)out.mOutList[0].object;
+		ir_obj = (A::Pola_Object *)out.mOutList[0].object_ir;
+		ir_lenth = out.mOutList[0].ir_length;
+	}
 	
+	std::vector<int> matchPair(face_lenth, ir_lenth);
+	if(ir_obj != NULL){
+		ret_code = A::Match_Lv(rgb_obj, face_lenth, ir_obj, ir_lenth, matchPair.data());
+		ir_mode = 1;
+	}
+
 	for (i=0; i< out.mOutList.size(); i++) {
 			float *feature_result = 0;
 			int size;
-			rgb_obj = (A::Pola_Object *)out.mOutList[i].object;
+			
 #ifdef ADD_FACE_NO_LIVENESSCHECK
 			if(out.mOutList[i].tracking_flag == 0x33)
 		 	{
@@ -162,18 +188,30 @@ bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out
 				out.mOutList[i].mScore = 0.022;
 			}
 			
-			float live_score;
+			float live_score = 0.f;
 	
 	#ifdef ADD_FACE_NO_LIVENESSCHECK
 			if(!igrore){
-				A::Check_Liveness(rgb_obj[i], &live_score);
+				if(ir_mode){
+					if(matchPair[i] < ir_lenth){
+						ret_code = A::getScore(rgb_obj[i], ir_obj[matchPair[i]],&live_score);
+					}
+				} else{
+					A::Check_Liveness(rgb_obj[i], &live_score);
+				}
 			}
 			else{
 				printf("add face ,no need check livenees!\n");
 				live_score = 1.0;
 			}
 	#else
+			if(ir_mode){
+				if(matchPair[i] < ir_lenth){
+					ret_code = A::getScore(rgb_obj[i], ir_obj[matchPair[i]],&live_score);
+				}
+			} else{
 				A::Check_Liveness(rgb_obj[i], &live_score);
+			}
 	#endif
 
 			if(live_score < 0.7)
@@ -188,17 +226,23 @@ bool FaceNeDummyImpl::detect(int device, Frame &frame, FaceNeDummyImpl::Out &out
 					ret_code = A::freeFeature(feature_result);
 				}else if(feature_result != 0)
 				{
-					printf("feature_result is not null need free!\n");
+					//printf("feature_result is not null need free!\n");
 					ret_code = A::freeFeature(feature_result);
 				}
 			}
         }
 		if(face_lenth){
-			ret_code = A::freeAllFace(rgb_obj, face_lenth);
+			ret_code = A::freeAllFace(rgb_obj, face_lenth);				
 			if(ret_code != A::RET_OK)
 				printf("failed to freeAllFace face_lenth %d \n",face_lenth);
 		}
-		
+
+		if(ir_lenth){
+			ret_code = A::freeAllFace(ir_obj, ir_lenth);				
+			if(ret_code != A::RET_OK)
+				printf("failed to freeAllFace face_lenth %d \n",ir_lenth);
+		}
+
     return true;
 }
 

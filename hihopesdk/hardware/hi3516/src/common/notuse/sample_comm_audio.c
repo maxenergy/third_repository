@@ -1647,6 +1647,129 @@ HI_S32 SAMPLE_COMM_AUDIO_StopAdec(ADEC_CHN AdChn)
     return HI_SUCCESS;
 }
 
+int hisi_pb_audio_open()
+{
+		
+		VB_CONFIG_S stVbConf;
+		HI_S32 s32Ret;
+		HI_S32 s32AiChnCnt;
+		HI_S32 s32AoChnCnt;
+		HI_S32 s32AencChnCnt = 1;
+		ADEC_CHN    AdChn = 0;
+		AI_CHN		AiChn = 0;
+		AO_CHN		AoChn = 0;
+		AIO_ATTR_S stAioAttr;
+	
+		AUDIO_DEV	AiDev = SAMPLE_AUDIO_INNER_AI_DEV;
+		AUDIO_DEV	AoDev = SAMPLE_AUDIO_INNER_AO_DEV;
+		stAioAttr.enSamplerate	 = AUDIO_SAMPLE_RATE_48000;
+		stAioAttr.enBitwidth	 = AUDIO_BIT_WIDTH_16;
+		stAioAttr.enWorkmode	 = AIO_MODE_I2S_MASTER;
+		stAioAttr.enSoundmode	 = AUDIO_SOUND_MODE_STEREO;
+		stAioAttr.u32EXFlag 	 = 0;
+		stAioAttr.u32FrmNum 	 = 30;
+		stAioAttr.u32PtNumPerFrm = 1024;
+		stAioAttr.u32ChnCnt 	 = 1;
+		stAioAttr.u32ClkSel 	 = 0;
+		stAioAttr.enI2sType 	 = AIO_I2STYPE_INNERCODEC;
+		
+		memset(&stVbConf, 0, sizeof(VB_CONFIG_S));
+	    s32Ret = SAMPLE_COMM_SYS_Init(&stVbConf);
+		/* enable AI channle */
+		s32AiChnCnt = stAioAttr.u32ChnCnt;
+		s32Ret = SAMPLE_COMM_AUDIO_StartAi(AiDev, s32AiChnCnt, &stAioAttr, AUDIO_SAMPLE_RATE_BUTT, HI_FALSE, NULL, 0);
+		if (s32Ret != HI_SUCCESS)
+		{
+			printf("error code is %d \n",s32Ret);
+			return -1;
+		}
+
+		s32Ret = SAMPLE_COMM_AUDIO_StartAenc(s32AencChnCnt, &stAioAttr, PT_LPCM);
+		if (s32Ret != HI_SUCCESS)
+		{
+			printf("error code is %d \n",s32Ret);
+			return -1;
+		}
+
+		s32Ret = SAMPLE_COMM_AUDIO_AencBindAi(AiDev, 0, 0);
+		if (s32Ret != HI_SUCCESS)
+		{
+			printf("error code is %d \n",s32Ret);
+			return -1;
+		}
+	
+		/* enable AO channle */
+
+	    s32Ret = SAMPLE_COMM_AUDIO_StartAdec(AdChn, PT_LPCM);
+	    if (s32Ret != HI_SUCCESS)
+	    {
+	        printf("error code is %d \n",s32Ret);
+			return -1;
+	    }		
+
+		s32AoChnCnt = stAioAttr.u32ChnCnt;
+		s32Ret = SAMPLE_COMM_AUDIO_StartAo(AoDev, s32AoChnCnt, &stAioAttr, AUDIO_SAMPLE_RATE_BUTT, HI_FALSE);
+		if (s32Ret != HI_SUCCESS)
+		{
+			printf("error code is %d \n",s32Ret);
+			return -1;
+		}
+	
+		/* config internal audio codec */
+		s32Ret = SAMPLE_COMM_AUDIO_CfgAcodec(&stAioAttr);
+		if (s32Ret != HI_SUCCESS)
+		{
+			printf("error code is %d \n",s32Ret);
+			return -1;
+		}
+
+		s32Ret = SAMPLE_COMM_AUDIO_AoBindAdec(AoDev, AoChn, AdChn);
+		if (s32Ret != HI_SUCCESS)
+		{
+			printf("error code is %d \n",s32Ret);
+			return -1;
+		}
+		return s32Ret;
+
+}
+
+void hisi_audio_close()
+{
+	HI_S32 s32Ret;
+	HI_S32 s32AiChnCnt=1;
+	HI_S32 s32AoChnCnt=1;
+	AI_CHN		AiChn = 0;
+	AO_CHN		AoChn = 0;
+	AIO_ATTR_S stAioAttr;
+
+	AUDIO_DEV	AiDev = SAMPLE_AUDIO_INNER_AI_DEV;
+	AUDIO_DEV	AoDev = SAMPLE_AUDIO_INNER_AO_DEV;
+
+	s32Ret = SAMPLE_COMM_AUDIO_AoUnbindAdec(AoDev, 0, 0);
+
+	s32Ret |= SAMPLE_COMM_AUDIO_StopAo(AoDev, s32AoChnCnt, HI_FALSE);
+	if (s32Ret != HI_SUCCESS)
+	{
+		printf("error code is %d \n",s32Ret);
+			return -1;
+	}
+	
+	s32Ret |= SAMPLE_COMM_AUDIO_StopAdec(0);
+
+
+
+	SAMPLE_COMM_AUDIO_AencUnbindAi(AiDev, 0, 0);
+	s32Ret |= SAMPLE_COMM_AUDIO_StopAenc(1);
+	s32Ret |= SAMPLE_COMM_AUDIO_StopAi(AiDev, s32AiChnCnt, HI_FALSE, HI_FALSE);
+	if (s32Ret != HI_SUCCESS)
+	{
+		printf("error code is %d \n",s32Ret);
+			return -1;
+	}
+
+}
+
+
 #ifdef __cplusplus
 #if __cplusplus
 }
